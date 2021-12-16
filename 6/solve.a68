@@ -1,0 +1,17 @@
+BEGIN
+  STRING fish := "";
+  read((fish));
+  CO remove "," CO
+  (INT j := 0; FOR i TO UPB fish DO (fish[i] /= "," | fish[j+:=1] := fish[i]) OD; fish := fish[:j]);
+
+  TO 80 DO
+    INT spawn := 0;
+    FOR i TO UPB fish DO
+      (fish[i] = "0" | spawn +:= 1; fish[i] := "6"
+                     | fish[i] := REPR (ABS fish[i] - 1))
+    OD;
+    fish +:= spawn * "8"
+  OD;
+
+  print((UPB fish, new line))
+END

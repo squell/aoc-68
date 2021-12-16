@@ -1,0 +1,18 @@
+[100]INT called numbers;
+
+PROC read input = REF[]BINGO:
+BEGIN
+ readf(($n(UPB called numbers)(g",")l$, called numbers));
+ [100][5,5]INT given cards;
+ read((given cards));
+
+ HEAP[UPB given cards]BINGO cards;
+ FOR i TO UPB cards DO
+   FOR n TO 5 DO
+     FOR m TO 5 DO
+       cards[i][n,m] := given cards[i][n,m]
+     OD
+   OD
+ OD;
+ cards
+END;

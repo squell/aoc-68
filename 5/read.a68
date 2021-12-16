@@ -1,0 +1,9 @@
+MODE POS = STRUCT(INT x,y);
+MODE LINE = STRUCT(POS start, end);
+
+PROC read line = LINE:
+BEGIN
+  LINE tmp;
+  readf(($2(g",") "->" 2(g",")$, tmp));
+  tmp
+END;

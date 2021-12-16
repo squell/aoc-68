@@ -1,0 +1,57 @@
+PR include "read.a68" PR
+
+INT count := 0;
+[0:999,0:999]INT grid;
+
+FOR i FROM 1 LWB grid TO 1 UPB grid DO
+  FOR j FROM 2 LWB grid TO 2 UPB grid DO grid[i,j] := 0
+OD OD;
+
+PROC is vertical = (LINE line)BOOL:
+  x OF start OF line = x OF end OF line;
+
+PROC is horizontal = (LINE line)BOOL:
+  y OF start OF line = y OF end OF line;
+
+OP = = (POS a,b)BOOL:
+  (x OF a = x OF b AND y OF a = y OF b);
+OP /= = (POS a,b)BOOL:
+  NOT (a = b);
+
+PROC touch = (POS p)VOID:
+  (REF INT cell = grid[x OF p, y OF p];
+   IF (cell +:= 1) = 2 THEN count +:= 1 FI);
+
+PROC walk = (POS start, end, PROC (REF POS)VOID incr)VOID:
+BEGIN
+  POS p := start;
+  WHILE 
+    touch(p);
+    p /= end
+  DO
+    incr(p)
+  OD
+END;
+
+BEGIN
+  on logical file end(stand in, (REF FILE f)BOOL: done);
+  DO
+    LINE l = read line;
+    PROC(REF INT)VOID step =
+      IF x OF start OF l < x OF end OF l
+      OR y OF start OF l < y OF end OF l
+      THEN
+        (REF INT n)VOID: n +:= 1
+      ELSE
+        (REF INT n)VOID: n -:= 1
+      FI;
+
+    IF is horizontal(l) THEN
+      walk(start OF l, end OF l, (REF POS p)VOID: step(x OF p))
+    ELIF is vertical(l) THEN
+      walk(start OF l, end OF l, (REF POS p)VOID: step(y OF p))
+    FI
+  OD;
+done:
+  print((count, new line))
+END

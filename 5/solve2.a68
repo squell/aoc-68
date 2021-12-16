@@ -1,0 +1,49 @@
+PR include "read.a68" PR
+
+INT count := 0;
+[0:999,0:999]INT grid;
+
+FOR i FROM 1 LWB grid TO 1 UPB grid DO
+  FOR j FROM 2 LWB grid TO 2 UPB grid DO grid[i,j] := 0
+OD OD;
+
+OP = = (POS a,b)BOOL:
+  (x OF a = x OF b AND y OF a = y OF b);
+OP /= = (POS a,b)BOOL:
+  NOT (a = b);
+
+PROC touch = (POS p)VOID:
+  (REF INT cell = grid[x OF p, y OF p];
+   IF (cell +:= 1) = 2 THEN count +:= 1 FI);
+
+PROC walk = (POS start, end, PROC (REF POS)VOID incr)VOID:
+BEGIN
+  POS p := start;
+  WHILE 
+    touch(p);
+    p /= end
+  DO
+    incr(p)
+  OD
+END;
+
+BEGIN
+  on logical file end(stand in, (REF FILE f)BOOL: done);
+  DO
+    LINE l = read line;
+    CO a function that takes a function and returns a function CO
+    PROC detect direction = (PROC(POS)INT coord) PROC(REF INT)VOID:
+      IF coord(start OF l) < coord(end OF l) THEN
+        (REF INT n)VOID: n +:= 1
+      ELIF coord(start OF l) > coord(end OF l) THEN
+        (REF INT n)VOID: n -:= 1
+      ELSE
+        (REF INT n)VOID: SKIP
+      FI;
+    PROC(REF INT)VOID step x = detect direction((POS p)INT: x OF p);
+    PROC(REF INT)VOID step y = detect direction((POS p)INT: y OF p);
+    walk(start OF l, end OF l, (REF POS p)VOID: (step x(x OF p); step y(y OF p)))
+  OD;
+done:
+  print((count, new line))
+END

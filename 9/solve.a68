@@ -1,0 +1,30 @@
+BEGIN
+  INT risk level := 0;
+  [100,100]INT map;
+  PROC is local minimum = (INT x,y)BOOL:
+    ((x = 1 LWB map | TRUE | map[x,y] < map[x-1,y]) AND
+     (x = 1 UPB map | TRUE | map[x,y] < map[x+1,y]) AND
+     (y = 2 LWB map | TRUE | map[x,y] < map[x,y-1]) AND
+     (y = 2 UPB map | TRUE | map[x,y] < map[x,y+1]));
+
+  INT line := 0;
+  on line end(stand in, (REF FILE f)BOOL: (line+:=1; newline(f); TRUE));
+  on logical file end(stand in, (REF FILE f)BOOL: done reading);
+  DO
+    STRING s;
+    read((s));
+    FOR i TO UPB s DO map[line, i] := ABS s[i] - ABS "0" OD
+  OD;
+
+done reading:
+
+  FOR x TO 1 UPB map DO
+    FOR y TO 2 UPB map DO
+      IF is local minimum(x,y) THEN
+        risk level +:= 1 + map[x,y]
+      FI
+    OD
+  OD;
+
+  print((risk level, new line))
+END

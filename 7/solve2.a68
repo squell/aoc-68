@@ -1,0 +1,33 @@
+PROC get positions = []INT:
+BEGIN
+  on logical file end(stand in, (REF FILE f)BOOL: done reading);
+  FLEX[0]INT pos;
+  FOR i DO
+    INT x; readf(($g","$,x));
+    [i]INT new pos; FOR j TO i-1 DO new pos[j] := pos[j] OD;
+    (pos := new pos)[i] := x
+  OD;
+done reading:
+  pos
+END;
+
+PROC sum = (INT a, b, PROC(INT)INT value)INT:
+  (INT acc := 0; FOR i FROM a TO b DO acc +:= value(i) OD; acc);
+
+PROC triangle = (INT a)INT:
+  (INT x = ABS a; x*(x+1) % 2);
+
+BEGIN
+  FLEX[0]INT crabs := get positions;
+  INT best fuel := 1000000000;
+  INT best pos;
+  FOR pos FROM 0 TO 2000 DO
+    INT cand = sum(LWB crabs, UPB crabs, (INT i)INT: triangle(crabs[i] - pos));
+    IF cand < best fuel THEN
+      best fuel := cand;
+      best pos := pos
+    FI
+  OD;
+  print((best pos, new line));
+  print((best fuel, new line))
+END

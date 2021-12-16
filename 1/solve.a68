@@ -1,0 +1,12 @@
+BEGIN
+  on logical file end(stand in, (REF FILE f)BOOL: finished);
+  INT x := 0, buf, acc := 0;
+  REF INT last := x;
+  DO
+    read((x));
+    IF x > last THEN acc +:= 1 FI;
+    REF INT(last := buf) := x
+  OD;
+finished:
+  print((acc, new line))
+END

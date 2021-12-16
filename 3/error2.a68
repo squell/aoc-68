@@ -1,0 +1,68 @@
+CO
+
+the idea here is to compute gamma and delta as before, and then find the best match in the 
+ata set for (modified) gamma and delta; this requires two passes over the data; but sadly it
+computes the wrong value
+
+CO
+
+PROC parse binary = (STRING text)INT:
+BEGIN
+  INT acc := 0;
+  FOR i TO UPB text DO 
+    acc := 2*acc + (text[i] = "1" | 1 |: text[i] = "0" | 0 | print("what?!"); stop)
+  OD;
+  acc
+END;
+
+BEGIN
+  FILE input; open(input, "dummy", stand back channel);
+
+  STRING bit string := "";
+  get(input,(bit string, new line));
+  INT width = UPB bit string;
+
+  [width]INT count; FOR i TO width DO count[i] := 0 OD;
+  INT num lines := 0;
+
+  on logical file end(input, (REF FILE f)BOOL: finished first pass);
+  DO
+    FOR i TO width DO
+      count[i] +:= (bit string[i] = "1" | 1 | 0)
+    OD;
+    num lines +:= 1;
+    get(input, (bit string, new line))
+  OD;
+
+finished first pass: 
+  BEGIN
+    STRUCT(INT n, STRING text) co2 candidate    := (0, width*" ");
+    STRUCT(INT n, STRING text) oxygen candidate := (0, width*" ");
+    STRING gamma := "", epsilon := "";
+
+    FOR i TO width DO
+      CHAR most common  = (count[i] >= num lines / 2 | "1" | "0");
+      CHAR least common = (count[i] >= num lines / 2 | "0" | "1");
+      gamma   := gamma   + most common;
+      epsilon := epsilon + least common
+    OD;
+    print(("gamma  =",gamma, new line));
+    print(("epsilon=",epsilon, new line));
+
+    reset(input);
+    on logical file end(input, (REF FILE f)BOOL: finished second pass);
+    DO
+      get(input, (bit string, new line));
+      PROC compare to = (STRING goal, REF STRUCT(INT n, STRING text) pattern)VOID:
+        FOR i TO width WHILE bit string[i] = goal[i] DO
+	  IF i > n OF pattern THEN pattern := (i, bit string) FI
+	OD;
+      compare to (gamma,   oxygen candidate);
+      compare to (epsilon, co2 candidate)
+    OD;
+finished second pass:
+    print((oxygen candidate, new line));
+    print((co2 candidate, new line));
+    print((parse binary (text OF co2 candidate) * parse binary (text OF oxygen candidate)))
+  END
+END

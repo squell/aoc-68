@@ -1,0 +1,58 @@
+BEGIN
+  [100,100]INT map;
+
+  PROC read input = VOID:
+  BEGIN
+    INT line := 0;
+    on line end(stand in, (REF FILE f)BOOL: (line+:=1; newline(f); TRUE));
+    on logical file end(stand in, (REF FILE f)BOOL: done reading);
+    DO
+      STRING s;
+      read((s));
+      FOR i TO UPB s DO map[line, i] := ABS s[i] - ABS "0" OD
+    OD;
+  done reading:
+    SKIP
+  END;
+
+  read input;
+
+  CO mark off all borders CO
+  [0:1 UPB map+1, 0:2 UPB map+1]BOOL visited;
+  FOR x TO 1 UPB map DO
+    visited[x,2 UPB map+1] := visited[x,0] := TRUE;
+    FOR y TO 2 UPB map DO
+      visited[x,y] := map[x,y] = 9
+    OD
+  OD;
+  FOR y TO 2 UPB map DO
+    visited[1 UPB map+1,y] := visited[0,y] := TRUE
+  OD;
+
+  PROC basin size= (INT x,y)INT:
+    (visited[x,y] := TRUE;
+     1+ (visited[x+1,y] | 0 | basin size(x+1,y)) +
+        (visited[x-1,y] | 0 | basin size(x-1,y)) +
+        (visited[x,y+1] | 0 | basin size(x,y+1)) +
+        (visited[x,y-1] | 0 | basin size(x,y-1)));
+
+  [3]INT best basins := (0,0,0);
+  PROC cmp swap = (REF INT x, y)VOID:
+    (INT tmp = x;
+     IF tmp < y THEN x := y; y := tmp FI);
+
+  FOR x TO 1 UPB map DO
+    FOR y TO 2 UPB map DO
+      IF NOT visited(x,y) THEN
+        INT this basin = basin size(x,y);
+	IF this basin > best basins[3] THEN
+	  best basins[3] := this basin;
+	  cmp swap(best basins[2], best basins[3]);
+	  cmp swap(best basins[1], best basins[2])
+	FI
+      FI
+    OD
+  OD;
+
+  print((best basins[1]*best basins[2]*best basins[3], new line))
+END

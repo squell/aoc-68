@@ -1,0 +1,15 @@
+BEGIN
+  on logical file end(stand in, (REF FILE f)BOOL: finished);
+  make term(stand in, " ");
+  [2]INT pos := (0,0);
+  DO
+    STRING cmd := ""; INT arg := 0;
+    read((cmd,arg,new line));
+    IF   cmd = "forward" THEN pos[1] +:= arg
+    ELIF cmd = "down"    THEN pos[2] +:= arg
+    ELIF cmd = "up"      THEN pos[2] -:= arg
+    FI
+  OD;
+finished:
+  print((pos[1]*pos[2], new line))
+END

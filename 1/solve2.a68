@@ -1,0 +1,17 @@
+BEGIN
+  on logical file end(stand in, (REF FILE f)BOOL: finished);
+  [3]INT window := (0,0,0);
+  REF INT a = window[1];
+  REF INT b = window[2];
+  REF INT c = window[3];
+  read(window);
+  INT acc := 0;
+  DO
+    INT d := 0;
+    read((d));
+    IF a + b + c < b + c + d THEN acc +:= 1 FI;
+    window := (b, c, d)
+  OD;
+finished:
+  print((acc, new line))
+END

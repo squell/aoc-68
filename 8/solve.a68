@@ -1,0 +1,34 @@
+MODE PUZZLE = STRUCT([4]STRING digits);
+
+PROC read pattern = PUZZLE:
+BEGIN
+  STRING s;
+  make term(stand in, "|");
+  read(s); CO discard the first part CO
+  read(LOC [2]CHAR);
+  PUZZLE line;
+  make term(stand in, " ");
+  FOR i TO 4 DO read((digits OF line)[i]); read(LOC CHAR) OD;
+  line
+END;
+
+BEGIN
+  on logical file end(stand in, (REF FILE f)BOOL: done);
+  INT count := 0;
+  DO
+    []STRING digits = digits OF read pattern;
+    FOR i TO 4 DO
+      CASE UPB digits[i] IN
+        ~,
+	count +:= 1 CO 1 CO,
+	count +:= 1 CO 7 CO,
+	count +:= 1 CO 4 CO,
+	~,
+	~,
+	count +:= 1 CO 8 CO
+      ESAC
+    OD
+  OD;
+done:
+  print((count, new line))
+END

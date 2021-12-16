@@ -1,0 +1,29 @@
+BEGIN
+  on logical file end(stand in, (REF FILE f)BOOL: finished);
+
+  STRING bit string := "";
+  read((bit string, new line));
+  INT width = UPB bit string;
+
+  [width]INT count; FOR i TO width DO count[i] := 0 OD;
+  INT gamma, epsilon, num lines;
+  gamma := epsilon := num lines := 0;
+
+  DO
+    FOR i TO width DO
+      count[i] +:= (bit string[i] = "1" | 1 | 0)
+    OD;
+    num lines +:= 1;
+    read((bit string, new line))
+  OD;
+
+finished:
+
+  FOR i TO width DO
+    INT dominant bit = (count[i] >= num lines / 2 | 1 | 0);
+    gamma   := 2*gamma   + dominant bit;
+    epsilon := 2*epsilon + (1-dominant bit);
+  OD;
+
+  print((gamma * epsilon))
+END

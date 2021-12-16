@@ -1,0 +1,56 @@
+PROC score = (STRING s)LONG INT:
+BEGIN
+  LONG INT acc := 0;
+  FOR i TO UPB s DO
+    INT p;
+    IF char in string(s[i], p, ")]}>") THEN acc := 5*acc + p FI
+  OD;
+  acc
+END;
+
+CO more plumbing CO
+PROC insert = (REF FLEX[]LONG INT arr, LONG INT value)VOID:
+BEGIN
+  []LONG INT copy = arr;
+  arr := LOC [LWB arr:UPB arr+1]LONG INT;
+  FOR i FROM LWB copy TO UPB copy DO
+    arr[i] := copy[i]
+  OD;
+  arr[UPB arr] := value;
+  FOR i FROM UPB arr DOWNTO LWB arr+1
+  WHILE arr[i-1] > arr[i] DO
+    LONG INT tmp = arr[i-1]; arr[i-1] := arr[i]; arr[i] := tmp
+  OD
+END;
+
+BEGIN
+  FLEX[0]LONG INT scores;
+  on logical file end(stand in, (REF FILE f)BOOL: done reading);
+  DO
+    STRING complete := "";
+    PROC parse = (STRING s)STRING:
+      IF (UPB s = 0 | TRUE | NOT char in string(s[1], LOC INT, "<({[")) THEN s ELSE
+	CHAR close char
+	             = IF s[1] = "{" THEN "}"
+	             ELIF s[1] = "<" THEN ">"
+		     ELIF s[1] = "[" THEN "]"
+		     ELIF s[1] = "(" THEN ")"
+		     FI;
+	STRING rest = parse(s[2:]);
+	IF UPB rest = 0 THEN
+	  complete := complete + close char; ""
+	ELIF rest[1] = close char THEN parse(rest[2:])
+	ELSE break
+	FI
+      FI;
+    STRING s; read((s, new line));
+    parse(s);
+    LONG INT this score = score(complete);
+    print((complete, this score, new line));
+    insert(scores, this score);
+break: 
+    SKIP
+  OD;
+done reading:
+  print((scores[(LWB scores+UPB scores)%2], new line))
+END

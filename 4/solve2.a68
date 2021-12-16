@@ -1,0 +1,52 @@
+MODE BINGO = [5,5]UNION(VOID,INT);
+
+PR include "read.a68" PR
+
+PROC check number = (INT ballot, REF BINGO chart)BOOL:
+BEGIN
+  BOOL struck := FALSE;
+  PROC strike = (REF UNION(VOID,INT) cell)VOID:
+   (cell | (INT n): IF n = ballot THEN cell := EMPTY; struck := TRUE FI);
+
+  FOR i FROM 1 TO 5 DO
+    FOR j FROM 1 TO 5 DO
+      strike (chart[i,j])
+    OD
+  OD;
+
+  PROC check = ([]UNION(VOID,INT) line)BOOL:
+    (BOOL ok := TRUE;
+     FOR i FROM LWB line TO UPB line DO ok := (line[i] | (VOID): ok | FALSE) OD;
+     ok);
+
+  IF struck THEN
+    check(chart[1,]) OR check(chart[2,]) OR check(chart[3,]) OR check(chart[4,]) OR check(chart[5,]) OR
+    check(chart[,1]) OR check(chart[,2]) OR check(chart[,3]) OR check(chart[,4]) OR check(chart[,5])
+  ELSE 
+    FALSE
+  FI
+END;
+
+PROC sum = (REF BINGO chart)INT:
+BEGIN
+  INT acc := 0;
+  FOR i FROM 1 TO 5 DO
+    FOR j FROM 1 TO 5 DO
+      (chart[i,j] | (INT n): acc +:= n);
+      chart[i,j] := EMPTY
+    OD
+  OD;
+  acc
+END;
+
+BEGIN
+  REF []BINGO card = read input;
+  FOR i TO UPB called numbers DO
+    FOR k TO UPB card DO
+      IF check number(called numbers[i], card[k]) THEN
+        print((called numbers[i]*sum(card[k]), new line))
+      FI
+    OD
+  OD;
+  print(("answer ^", new line))
+END

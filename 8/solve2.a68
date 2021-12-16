@@ -1,0 +1,79 @@
+MODE PUZZLE = STRUCT([10]STRING pattern, [4]STRING output);
+
+PROC read pattern = PUZZLE:
+BEGIN
+  PUZZLE line;
+  make term(stand in, " ");
+  FOR i TO 10 DO read((pattern OF line)[i]); read(LOC CHAR) OD;
+  STRING s; read((s));
+  IF s /= "|" THEN put(stand error, ("oops?")); stop FI;
+  FOR i TO 4 DO read (LOC CHAR); read((output OF line)[i]) OD;
+  read(new line);
+  line
+END;
+
+PRIO SUBSETOF = 5;
+OP SUBSETOF = (STRING x,y)BOOL:
+BEGIN
+  BOOL subset := TRUE;
+  FOR i TO UPB x WHILE subset DO
+    subset := FALSE;
+    FOR j TO UPB y WHILE NOT subset DO
+      subset := x[i] = y[j]
+    OD
+  OD;
+  subset
+END;
+
+PROC deduce = (PUZZLE p)INT:
+BEGIN
+  [0:9]STRING code;
+  CO find the known values of 1,4,7,8 CO
+  FOR i TO UPB pattern OF p DO
+    PROC found = (INT k)VOID: code[k] := (pattern OF p)[i];
+    (UPB (pattern OF p)[i]| ~, found(1), found(7), found(4), ~, ~, found(8))
+  OD;
+  CO find the known values of 0, 6, 9 CO
+  FOR i TO UPB pattern OF p DO IF UPB (pattern OF p)[i] = 6 THEN
+    PROC found = (INT k)VOID: code[k] := (pattern OF p)[i];
+    IF code[4] SUBSETOF (pattern OF p)[i] THEN
+      found(9) 
+    ELIF code[1] SUBSETOF (pattern OF p)[i] THEN
+      found(0)
+    ELSE
+      found(6)
+    FI
+  FI OD;
+  CO find the known values of 2, 3, 5 CO
+  FOR i TO UPB pattern OF p DO IF UPB (pattern OF p)[i] = 5 THEN
+    PROC found = (INT k)VOID: code[k] := (pattern OF p)[i];
+    IF code[1] SUBSETOF (pattern OF p)[i] THEN
+      found(3) 
+    ELIF (pattern OF p)[i] SUBSETOF code[6] THEN
+      found(5)
+    ELSE
+      found(2)
+    FI
+  FI OD;
+  
+  PROC same = (STRING x,y)BOOL: x SUBSETOF y AND y SUBSETOF x;
+  INT acc := 0;
+  FOR i TO 4 DO
+    FOR j FROM LWB code TO UPB code DO 
+      IF same(code[j], (output OF p)[i]) THEN acc := 10*acc + j; continue FI
+    OD;
+    put(stand error, ("this should not happen")); stop;
+continue: ~
+  OD;
+  acc
+END;
+
+BEGIN
+  on logical file end(stand in, (REF FILE f)BOOL: done);
+  INT sum := 0;
+  DO
+    sum +:= deduce(read pattern)
+  OD;
+done:
+  print((sum, new line))
+END

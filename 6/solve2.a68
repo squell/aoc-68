@@ -1,0 +1,23 @@
+BEGIN
+  STRING fish := "";
+  read((fish));
+  [0:8]LONG INT pop;
+  FOR i FROM LWB pop TO UPB pop DO pop[i] := 0 OD;
+  FOR i FROM LWB fish TO UPB fish DO
+    INT p; IF char in string(fish[i], p, "0123456789")
+           THEN
+	      pop[p-1] +:= 1
+           FI
+  OD;
+
+  TO 256 DO
+    LONG INT spawn = pop[0];
+    FOR i FROM 0 TO 7 DO pop[i] := pop[i+1] OD;
+    pop[6] +:= spawn;
+    pop[8] := spawn
+  OD;
+
+  LONG INT sum := 0;
+  FOR i FROM 0 TO 8 DO sum +:= pop[i] OD;
+  print((sum, new line))
+END

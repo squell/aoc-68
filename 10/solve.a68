@@ -1,0 +1,37 @@
+BEGIN
+  on logical file end(stand in, (REF FILE f)BOOL: done reading);
+  INT score := 0;
+  DO
+    PROC error = (STRING s)STRING:
+    BEGIN
+      IF s[1] = ")"   THEN score +:= 3
+      ELIF s[1] = "]" THEN score +:= 57
+      ELIF s[1] = "}" THEN score +:= 1197
+      ELIF s[1] = ">" THEN score +:= 25137
+      FI;
+      break
+    END;
+
+    PROC parse = (STRING s)STRING:
+      IF (UPB s = 0 | TRUE | NOT char in string(s[1], LOC INT, "<({[")) THEN s ELSE
+	CHAR close char
+	             = IF s[1] = "{" THEN "}"
+	             ELIF s[1] = "<" THEN ">"
+		     ELIF s[1] = "[" THEN "]"
+		     ELIF s[1] = "(" THEN ")"
+		     FI;
+	STRING rest = parse(s[2:]);
+	IF UPB rest = 0 THEN ""
+	ELIF rest[1] = close char THEN parse(rest[2:])
+	ELSE error(rest)
+	FI
+      FI;
+    STRING s; read((s, new line));
+    print((s,new line));
+    parse(s);
+break: 
+    SKIP
+  OD;
+done reading:
+  print((score, new line))
+END

@@ -1,0 +1,77 @@
+COMMENT this solution assumes all the inputs are unique COMMENT
+
+MODE TREE = STRUCT(REF TREE bit0, bit1, INT weight);
+
+PROC insert = (REF REF TREE tree, STRING bit string)VOID:
+BEGIN
+  PROC child = (REF TREE tree)REF REF TREE:
+    IF bit string[1] = "0" THEN
+      bit0 OF tree
+    ELIF bit string[1] = "1" THEN
+      bit1 OF tree
+    ELSE
+      print(("What are you doing?"));
+      stop
+    FI;
+
+  IF REF TREE(tree) IS NIL THEN
+    tree := HEAP TREE := (NIL,NIL,0)
+  FI;
+  IF bit string /= "" THEN
+    insert(child(tree), bit string[2:])
+  FI;
+  weight OF tree +:= 1
+END;
+
+PROC walk = (REF TREE tree, PROC(TREE)BOOL take0)[]BOOL:
+BEGIN
+  PROC do walk = (TREE tree, INT depth)REF[]BOOL:
+  BEGIN
+    IF (bit0 OF tree IS NIL) AND (bit1 OF tree IS NIL) THEN
+      HEAP [depth]BOOL
+    ELIF (bit1 OF tree IS NIL | TRUE |:
+          bit0 OF tree IS NIL | FALSE |
+	  take0(tree)) THEN
+      REF[]BOOL path = do walk(bit0 OF tree, depth+1);
+      path[depth+1] := FALSE;
+      path
+    ELSE
+      REF[]BOOL path = do walk(bit1 OF tree, depth+1);
+      path[depth+1] := TRUE;
+      path
+    FI
+  END;
+  IF tree IS NIL THEN
+    HEAP [0]BOOL
+  ELSE
+    do walk(tree,0)
+  FI
+END;
+
+PROC binary = ([]BOOL bits)INT:
+  (INT acc := 0;
+   FOR i FROM LWB bits TO UPB bits DO
+     acc := acc*2 + (bits[i] | 1 | 0)
+   OD;
+   acc);
+
+BEGIN
+  REF TREE tree := NIL;
+  on logical file end(stand in, (REF FILE f)BOOL: finished loading);
+  DO
+    STRING bit string := "";
+    read((bit string, new line));
+    insert(tree, bit string)
+  OD;
+finished loading:
+  BEGIN
+    OP BESTS = (REF TREE a, b)BOOL: 
+      (weight OF a > weight OF b);
+    PRIO BESTS = 5;
+
+    []BOOL oxygen = walk(tree, (TREE tree)BOOL: bit0 OF tree BESTS bit1 OF tree);
+    []BOOL co2    = walk(tree, (TREE tree)BOOL: NOT (bit0 OF tree BESTS bit1 OF tree));
+
+    print((binary(oxygen) * binary(co2), new line))
+  END
+END
