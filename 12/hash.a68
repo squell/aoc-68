@@ -1,0 +1,45 @@
+CO hashmaps (simplified), implemented earlier for algol68-spl CO
+INT fnv prime = 16777619;
+BITS fnv basis = 16r811c9dc5; # INT fnv basis = 2166136261; #
+INT fnv buckets = 64;
+
+OP HASH = (STRING key)INT:
+BEGIN
+    BITS hash := fnv basis;
+    FOR i TO UPB key DO
+	BITS byte = BIN ABS key[i];
+	hash := SHORTEN BIN (LENG fnv prime * ABS (hash XOR byte) MOD (LENG2**32))
+    OD;
+    ABS hash
+END;
+
+MODE DICTENTRY = STRUCT(STRING key, DATUM content);
+MODE DICT = [0:fnv buckets-1]STRUCT(INT usage, REF []DICTENTRY bins);
+
+COMMENT  
+  re-setting the size of DICT in this fashion is an insane hack,
+  but RR says a MODE declaration is simply an abbreviation...
+COMMENT
+
+PROC new dictionary = DICT:
+    (DICT res; FOR i FROM LWB res TO UPB res DO res[i] := (0, HEAP[1]DICTENTRY) OD; res);
+
+PRIO => = 2;
+OP => = (REF DICT map, STRING word)REF DATUM:
+BEGIN
+    INT pos = HASH word MOD (UPB map+1);
+    REF REF []DICTENTRY list = bins OF map[pos];
+    REF DATUM result := NIL;
+    FOR i FROM usage OF map[pos] DOWNTO 1 WHILE REF DATUM(result) IS NIL DO
+	IF word = key OF list[i] THEN result := content OF list[i] FI
+    OD;
+    IF REF DATUM(result) ISNT NIL THEN
+      result
+    ELSE
+      REF INT lim = usage OF map[pos];
+      IF lim = UPB list THEN CO grow this bucket CO
+	HEAP[lim*2]DICTENTRY new list; new list[1:UPB list] := list; list := new list
+      FI;
+      content OF (list[lim +:= 1] := (word, ~))
+    FI
+END;

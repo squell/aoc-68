@@ -1,0 +1,72 @@
+MODE DATUM = FLEX [0]STRING;
+
+PR include "hash.a68" PR
+
+OP +:= = (REF FLEX[]STRING a, STRING str)VOID:
+(
+  [UPB a+1]STRING new; new[:UPB a]:= a; a := new;
+  a[UPB a] := str
+);
+
+PRIO HAS = 9;
+OP HAS = ([]STRING arr, STRING s)BOOL:
+(
+  BOOL b := FALSE;
+  FOR i TO UPB arr WHILE NOT b DO
+    b := arr[i] = s
+  OD;
+  b
+);
+
+PROC is small = (STRING s)BOOL:
+(
+  BOOL b := TRUE;
+  FOR i TO UPB s WHILE b DO
+    b := is lower(s[i])
+  OD;
+  b
+);
+
+CO read all the connections CO
+DICT connections := new dictionary;
+BEGIN
+  on logical file end(stand in, (REF FILE f)BOOL: done reading);
+  make term(stand in, "-");
+  DO
+    STRING a,b;
+    read((a,LOC CHAR,b,new line));
+    connections=>a +:= b;
+    connections=>b +:= a
+  OD;
+  done reading:
+  SKIP
+END;
+
+PROC walk = (STRING entry, goal)VOID:
+(
+   REF DICT map = connections;
+   FLEX[0]STRING cur path;
+   PROC go = (STRING cur)VOID:
+   (
+     cur path +:= cur;
+     []STRING next = map=>cur;
+     IF cur = goal THEN
+       total paths +:= 1;
+       printf(($n(UPB cur path-1)(g",")gl$, cur path))
+     ELSE
+       FOR i TO UPB next DO
+	 STRING cave = next[i];
+	 IF is small(cave) AND cur path HAS cave THEN SKIP ELSE
+	   go (cave)
+	 FI
+       OD
+     FI;
+     cur path := cur path[:UPB cur path-1]
+   );
+
+   go(entry)
+);
+
+INT total paths := 0;
+walk("start", "end");
+print(("TOTAL PATHS = ",total paths, new line))
