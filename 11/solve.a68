@@ -1,0 +1,38 @@
+[10,10]INT grid;
+
+readf(($n(1 UPB grid)(n(2 UPB grid)(c("1","2","3","4","5","6","7","8","9"))l)$, grid));
+
+PRIO ITERATE = 1;
+
+MODE RANGE = [2,2]INT;
+
+OP ITERATE = (PROC(INT,INT)VOID do, RANGE dim)VOID:
+  FOR i FROM dim[1,1] TO dim [1,2] DO
+    FOR j FROM dim[2,1] TO dim [2,2] DO
+      do(i,j)
+    OD
+  OD;
+
+OP ITERATE = (PROC(INT,INT)VOID do)VOID:
+  do ITERATE RANGE((1 LWB grid, 1 UPB grid), (2 LWB grid, 2 UPB grid));
+
+OP ITERATE = (PROC(REF INT)VOID do)VOID:
+  ITERATE ((INT i,j)VOID: do(grid[i,j]));
+
+INT flashes := 0;
+
+PROC excite = (INT i,j)VOID:
+  IF  1 LWB grid <= i AND i <= 1 UPB grid
+  AND 2 LWB grid <= j AND j <= 2 UPB grid
+  THEN
+    IF grid[i,j] <= 9 THEN
+      ((grid[i,j] +:= 1) > 9 | excite ITERATE RANGE((i-1, i+1), (j-1,j+1)))
+    FI
+  FI;
+
+TO 100 DO
+  ITERATE excite;
+  ITERATE ((REF INT n)VOID: IF n > 9 THEN flashes +:= 1; n := 0 FI)
+OD;
+
+print((flashes, new line))
