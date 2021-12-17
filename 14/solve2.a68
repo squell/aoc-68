@@ -1,0 +1,54 @@
+[26,26]INT rule;
+[26,26]LONG INT polymer := no pairs;
+INT final polymer;
+
+PROC no pairs = [,]LONG INT:
+  ([26,26]LONG INT tmp;
+   FOR i TO 26 DO FOR j TO 26 DO tmp[i,j] := 0 OD OD;
+   tmp);
+
+BEGIN
+    PROC ord = (CHAR c)INT: ABS c - ABS "A" + 1;
+    STRING template;
+    read((template, new line, new line));
+    FOR i TO UPB template-1 DO
+      polymer[ord(template[i]), ord(template[i+1])] +:= 1
+    OD;
+    final polymer := ord(template[UPB template]);
+
+    on logical file end(stand in, (REF FILE f)BOOL: done reading);
+    DO
+      STRING key;
+      readf(($2a " -> " al$, key));
+      rule[ord(key[1]), ord(key[2])] := ord(key[3])
+    OD;
+done reading:
+    SKIP
+END;
+
+TO 40 DO
+  [26,26]LONG INT new polymer := no pairs;
+  FOR i TO 26 DO FOR j TO 26 DO
+    IF LONG INT q = polymer[i,j]; q > 0 THEN
+      INT synth = rule[i,j];
+      new polymer[i,synth] +:= q;
+      new polymer[synth,j] +:= q
+    FI
+  OD OD;
+  polymer := new polymer
+OD;
+
+CO recompute the frequency table CO
+[26]LONG INT frequency;
+FOR i TO 26 DO frequency[i] := 0 OD;
+frequency[final polymer] := 1;
+FOR i TO 26 DO FOR j TO 26 DO
+  frequency[i] +:= polymer[i,j]
+OD OD;
+
+LONG INT most := -1;
+FOR i TO 26 DO LONG INT len = frequency[i]; IF len > most  THEN most  := len FI OD;
+LONG INT least := most;
+FOR i TO 26 DO LONG INT len = frequency[i]; IF 0 < len AND len < least THEN least := len FI OD;
+
+print((most - least, new line))

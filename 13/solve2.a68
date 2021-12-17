@@ -1,0 +1,62 @@
+FLEX [0:2000,0:999]BOOL dots;
+
+CO read the dots CO
+BEGIN
+    FOR i FROM 1 LWB dots TO 1 UPB dots DO
+    FOR j FROM 2 LWB dots TO 2 UPB dots DO
+      dots[i,j] := FALSE
+    OD OD;
+    on value error(stand in, (REF FILE f)BOOL: done dots);
+    DO
+      INT x, y;
+      readf(($g","gl$, x, y));
+      dots[x,y] := TRUE
+    OD;
+    done dots:
+    on value error(stand in, (REF FILE f)BOOL: TRUE)
+END;
+
+PROC fold up = (INT y)VOID:
+BEGIN
+  [,]BOOL upper = dots[:@0, :y-1 @ 0];
+  [,]BOOL lower = dots[:@0, y+1: @ 1-y];
+  dots := upper;
+  FOR j FROM 2 LWB dots TO 2 UPB dots DO
+    FOR i FROM 1 LWB dots TO 1 UPB dots DO
+      dots[i,j] := upper[i,j] OR lower[i,-j]
+    OD
+  OD
+END;
+
+PROC fold sideways = (INT x)VOID:
+BEGIN
+  [,]BOOL left  = dots[0:x-1@   0, :@0];
+  [,]BOOL right = dots[x+1: @ 1-x, :@0];
+  dots := left;
+  FOR j FROM 2 LWB dots TO 2 UPB dots DO
+    FOR i FROM 1 LWB dots TO 1 UPB dots DO
+      dots[i,j] := left[i,j] OR right[-i,j]
+    OD
+  OD
+END;
+
+PROC dump dots = VOID:
+  FOR i FROM 2 LWB dots TO 2 UPB dots DO
+  FOR j FROM 1 LWB dots TO 1 UPB dots DO
+    printf(($b("#",".")$, dots[j,i]))
+  OD;
+    print((new line))
+  OD;
+
+PROC read command = VOID:
+BEGIN
+    INT dir, value;
+    dir := value := 0;
+    readf(($"fold along "c("x","y")"="gl$, dir, value));
+    (dir | fold sideways, fold up)(value)
+END;
+
+on logical file end(stand in, (REF FILE f)BOOL: display);
+DO read command OD;
+
+display: dump dots

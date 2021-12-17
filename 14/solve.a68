@@ -1,0 +1,47 @@
+MODE DATUM = STRING;
+PR include "../12/hash.a68" PR
+
+STRING template;
+DICT rules := new dictionary;
+BEGIN
+
+    read((template, new line, new line));
+    on logical file end(stand in, (REF FILE f)BOOL: done reading);
+    DO
+      STRING key;
+      readf(($2a " -> " al$, key));
+      rules=>key[1:2] := key[3]+key[2]
+    OD;
+done reading:
+    SKIP
+END;
+
+PROC insert polymers = (REF STRING s)VOID:
+BEGIN
+    [2*UPB s-1]CHAR new;
+    new[1] := s[1];
+    FOR i TO UPB s-1 DO
+      new[2*i:2*i+1] := rules=>s[i:i+1]
+    OD;
+    s := new
+END;
+
+TO 10 DO
+  insert polymers(template)
+OD;
+print((template, new line));
+
+CO not very nice CO
+[26]INT frequency;
+FOR i TO 26 DO frequency[i] := 0 OD;
+FOR i TO UPB template DO frequency[ABS template[i] - ABS "A"+1] +:= 1 OD;
+
+INT most := -1;
+INT least := UPB template+1;
+FOR i TO 26 DO
+  INT len = frequency[i];
+  IF len > most  THEN most  := len FI;
+  IF 0 < len AND len < least THEN least := len FI
+OD;
+
+print((most - least, new line))
