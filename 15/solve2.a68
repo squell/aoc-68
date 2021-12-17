@@ -1,0 +1,121 @@
+PR heap=100M PR
+
+MODE SQUARE = STRUCT(INT total risk, risk level, queue pos, REF SQUARE north, south, east, west);
+[100,100]INT tile;
+
+CO read the risk level CO
+readf(($n(1 UPB tile)(
+        n(2 UPB tile)(
+	    c("1","2","3","4","5","6","7","8","9")
+	)l)$, tile));
+
+CO expand tiles to fill the map CO
+[5*(1 UPB tile),5*(2 UPB tile)]SQUARE map;
+
+FOR i TO 1 UPB map DO FOR j TO 2 UPB map DO
+    PROC wrap = (INT x, max)INT: (x-1) MOD max+1;
+    INT increase = (i-1) % (1 UPB tile) + (j-1) % (2 UPB tile);
+    risk level OF map[i,j]
+      := wrap(increase + tile[wrap(i, 1 UPB tile), wrap(j, 2 UPB tile)], 9)
+OD OD;
+
+CO create the edges in the graph CO
+BEGIN
+    [0:1 UPB map+1, 0:2 UPB map+1]REF SQUARE ref map;
+    FOR i FROM 1 LWB ref map TO 1 UPB ref map DO ref map[i,2 LWB ref map] := ref map[i,2 UPB ref map] := NIL OD; 
+    FOR j FROM 2 LWB     map TO 2 UPB     map DO ref map[1 LWB ref map,j] := ref map[2 UPB ref map,j] := NIL OD;
+    FOR i TO 1 UPB map DO FOR j TO 2 UPB map DO ref map[i,j] := map[i,j] OD OD;
+
+    north OF map := ref map[1:1 UPB map, 0:2 UPB map-1];
+    south OF map := ref map[1:1 UPB map, 2:2 UPB map+1];
+    east  OF map := ref map[2:1 UPB map+1, 1:2 UPB map];
+    west  OF map := ref map[0:1 UPB map-1, 1:2 UPB map]
+COMMENT
+    we can do all the linking by hand; avoiding the need to increase the heap to a clearly ridiculous 100 megabyte!
+
+    FOR i TO 1 UPB map DO south OF map[i,2 UPB map] := north OF map[i,2 LWB map] := NIL OD;
+    FOR i TO 2 UPB map DO east  OF map[1 UPB map,i] := west  OF map[1 LWB map,i] := NIL OD;
+    FOR i FROM 2 LWB map+1 TO 2 UPB map DO
+      FOR j FROM 1 LWB map TO 1 UPB map DO  north OF map[j,i] := map[j,i-1] OD OD;
+    FOR i FROM 2 LWB map TO 2 UPB map-1 DO
+      FOR j FROM 1 LWB map TO 1 UPB map DO  south OF map[j,i] := map[j,i+1] OD OD;
+    FOR i FROM 1 LWB map+1 TO 1 UPB map DO 
+      FOR j FROM 2 LWB map TO 2 UPB map DO west  OF map[i,j] := map[i-1,j] OD OD;
+    FOR i FROM 1 LWB map TO 1 UPB map-1 DO
+      FOR j FROM 2 LWB map TO 2 UPB map DO east  OF map[i,j] := map[i+1,j] OD OD
+COMMENT
+END;
+
+CO initialize the heap-based priority queue CO
+[1 UPB map*2 UPB map]REF SQUARE queue;
+INT queue size := 0;
+BEGIN
+    FOR i TO 1 UPB map DO FOR j TO 2 UPB map DO
+      total risk OF map[i,j] := 1000000000;
+      queue pos  OF map[i,j] := queue size +:= 1;
+      queue[queue size] := map[i,j]
+    OD OD
+END;
+
+PROC swap and assign = (REF INT x, INT y)VOID:
+(
+    REF SQUARE tmp = queue[x];
+    queue pos OF (queue[x] := queue[y]) := x;
+    queue pos OF (queue[y] := tmp)      := y;
+    x := y
+);
+
+PROC sift down = VOID:
+(
+    INT k := 1;
+    WHILE 2*k <= queue size DO
+	INT left = 2*k, right = left + (left < queue size | 1 | 0);
+	swap and assign (k, IF total risk OF queue[left] <= total risk OF queue[right] THEN left ELSE right FI)
+    OD
+);
+
+PROC sift up = (REF SQUARE cur)VOID:
+(
+    INT k := queue pos OF cur;
+    WHILE (k > 1 | total risk OF queue[k%2] > total risk OF cur | FALSE) DO
+    	swap and assign (k, k%2)
+    OD
+);
+
+PROC delete top = REF SQUARE:
+(
+    REF SQUARE top = queue[1];
+    swap and assign(LOC INT:=1, queue size); queue size -:= 1;
+    sift down;
+    top
+);
+
+CO visit the starting point CO
+total risk OF map[1,1] := 0;
+REF SQUARE destination = map[1 UPB map, 2 UPB map];
+
+WHILE queue size > 0 DO
+  REF SQUARE current = delete top;
+
+  IF current IS destination THEN found exit FI;
+
+  PROC try = (REF SQUARE next)VOID:
+    IF next ISNT NIL THEN
+      IF INT updated risk = total risk OF current + risk level OF next;
+         updated risk < total risk OF next
+      THEN
+         total risk OF next := updated risk;
+         sift up(next)
+      FI
+    FI;
+
+  try(north OF current);
+  try(south OF current);
+  try(east  OF current);
+  try(west  OF current)
+OD;
+print(("Dijkstra was wrong?", new line));
+stop;
+
+found exit:
+print(("found the exit: ", total risk OF destination, new line))
