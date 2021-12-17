@@ -1,0 +1,51 @@
+MODE VECTOR = STRUCT(INT x,y);
+MODE BOX = STRUCT([2]INT x,y);
+
+BOX target area;
+
+readf(($"target area: x=" g ".." g ", y=" g ".." g $, target area));
+
+PROC in target area = (VECTOR pos)BOOL:
+  x OF pos >= (x OF target area)[1] AND x OF pos <= (x OF target area)[2] AND
+  y OF pos >= (y OF target area)[1] AND y OF pos <= (y OF target area)[2];
+
+PROC step = (REF VECTOR pos, speed)VOID:
+BEGIN
+  x OF pos +:= x OF speed;
+  y OF pos +:= y OF speed;
+  x OF speed -:= (x OF speed > 0 | 1  |:
+                  x OF speed < 0 | -1 | 0);
+  y OF speed -:= 1
+END;
+
+PROC simulate = (VECTOR aim)UNION(VOID,INT):
+BEGIN
+  INT max height := 0;
+  VECTOR speed := aim;
+  VECTOR pos := (0,0);
+  BOOL hit := FALSE;
+  WHILE NOT hit AND 
+        y OF pos >= (y OF target area)[1] AND
+	x OF pos <= (x OF target area)[2]
+  DO
+    step(pos, speed);
+    IF y OF pos > max height THEN max height := y OF pos FI;
+    hit := in target area (pos)
+  OD;
+  (hit | max height | EMPTY)
+END;
+
+INT hits := 0;
+FOR x FROM 1 TO (x OF target area)[2] DO
+  FOR y FROM (y OF target area)[1] TO (x OF target area)[2] DO
+    CASE simulate((x,y)) IN
+      (INT h):
+        BEGIN
+          printf(($"hit x="g(0)", y="g(0)"; max height="g(0)l$, x,y,h));
+	  hits +:= 1
+	END
+    ESAC
+  OD
+OD;
+
+print(("possible values", hits, new line))
