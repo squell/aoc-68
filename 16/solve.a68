@@ -1,0 +1,95 @@
+CO process the input into a array of booleans CO
+FLEX [0]BOOL raw bits := BEGIN
+  STRING s; read((s));
+  FILE f; associate(f, s); 
+  [UPB s] BITS q;
+  getf(f,($16r1z$, q));
+  [4*UPB s]BOOL acc;
+  FOR i FROM 4 BY 4 TO UPB acc DO
+    acc[i-3:i] :=((bits width-3) ELEM q[i%4],
+                  (bits width-2) ELEM q[i%4], 
+		  (bits width-1) ELEM q[i%4],
+		  (bits width  ) ELEM q[i%4])
+  OD;
+  acc
+END;
+
+PROC get bits = (INT n)[]BOOL:
+BEGIN
+  []BOOL result = raw bits[1:n];
+  raw bits := raw bits[n+1:];
+  result
+END;
+
+OP ABS = ([]BOOL bits)LONG INT:
+BEGIN
+  LONG INT acc := 0;
+  FOR i FROM LWB bits TO UPB bits DO acc := 2*acc + (bits[i] | 1 | 0) OD;
+  acc
+END;
+
+MODE PACKET = STRUCT(INT version, id, UNION(LONG INT, REF []PACKET) data);
+
+PROC parse packet = PACKET:
+BEGIN
+  INT version = SHORTEN ABS get bits(3);
+  INT id      = SHORTEN ABS get bits(3);
+  (version, id,
+  IF id = 4 THEN
+    LONG INT acc := 0;
+    WHILE
+      []BOOL chunk = get bits(5);
+      acc := 16*acc + ABS chunk[2:5];
+      chunk[1]
+    DO ~ OD;
+    acc
+  ELSE
+    BOOL length type = get bits(1)[1];
+    IF length type = FALSE THEN
+      INT packet size = SHORTEN ABS get bits(15), stop length = UPB raw bits - packet size;
+      [UPB raw bits%7]PACKET buffer;
+      INT n := 0;
+      WHILE UPB raw bits > stop length  DO
+        buffer[n+:=1] := parse packet
+      OD;
+      HEAP[n]PACKET := buffer[1:n]
+    ELSE
+      INT num packets = SHORTEN ABS get bits(11);
+      [num packets]PACKET buffer;
+      FOR i TO UPB buffer DO
+        buffer[i] := parse packet
+      OD;
+      HEAP[num packets]PACKET := buffer
+    FI
+  FI)
+END;
+
+INT version sum := 0;
+
+PROC dump packet = (PACKET p)VOID:
+BEGIN
+  INT level := 0;
+  PROC dump = (PACKET p)VOID:
+  BEGIN
+    version sum +:= version OF p;
+    printf(($n(level)x"Version: "zl$, version OF p));
+    printf(($n(level)x"ID: "zl$, id OF p));
+    CASE data OF p IN
+      (LONG INT n):
+        printf(($n(level)x"literal="g(0)l$, n)),
+      (REF[]PACKET list):
+        (print((level*" ","{",newline));
+	level +:= 2;
+	FOR i TO UPB list DO
+	  dump (list[i])
+	OD;
+	level -:= 2;
+        print((level*" ","}",newline)))
+    ESAC
+  END;
+  dump (p)
+END;
+
+dump packet(parse packet);
+
+print((version sum, new line))
