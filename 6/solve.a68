@@ -1,4 +1,3 @@
-BEGIN
   STRING fish := "";
   read((fish));
   CO remove "," CO
@@ -14,4 +13,3 @@ BEGIN
   OD;
 
   print((UPB fish, new line))
-END

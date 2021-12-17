@@ -1,4 +1,3 @@
-BEGIN
   on logical file end(stand in, (REF FILE f)BOOL: finished);
 
   STRING bit string := "";
@@ -22,8 +21,7 @@ finished:
   FOR i TO width DO
     INT dominant bit = (count[i] >= num lines / 2 | 1 | 0);
     gamma   := 2*gamma   + dominant bit;
-    epsilon := 2*epsilon + (1-dominant bit);
+    epsilon := 2*epsilon + (1-dominant bit)
   OD;
 
   print((gamma * epsilon))
-END

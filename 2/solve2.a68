@@ -1,4 +1,3 @@
-BEGIN
   on logical file end(stand in, (REF FILE f)BOOL: finished);
   make term(stand in, " ");
   [2]INT pos := (0,0);
@@ -13,4 +12,3 @@ BEGIN
   OD;
 finished:
   print((pos[1]*pos[2], new line))
-END
