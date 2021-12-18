@@ -28,12 +28,12 @@ FOR y TO 2 UPB map DO
   visited[1 UPB map+1,y] := visited[0,y] := TRUE
 OD;
 
-PROC basin size= (INT x,y)INT:
-  (visited[x,y] := TRUE;
-   1+ (visited[x+1,y] | 0 | basin size(x+1,y)) +
-      (visited[x-1,y] | 0 | basin size(x-1,y)) +
-      (visited[x,y+1] | 0 | basin size(x,y+1)) +
-      (visited[x,y-1] | 0 | basin size(x,y-1)));
+PROC basin size = (INT x,y)INT:
+  IF visited[x,y] THEN 0 ELSE
+    visited[x,y] := TRUE;
+    1 + basin size(x+1,y) + basin size(x-1,y) +
+        basin size(x,y+1) + basin size(x,y-1)
+  FI;
 
 [3]INT best basins := (0,0,0);
 PROC cmp swap = (REF INT x, y)VOID:
