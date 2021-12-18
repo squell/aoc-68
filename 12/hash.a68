@@ -24,8 +24,8 @@ COMMENT
 PROC new dictionary = DICT:
     (DICT res; FOR i FROM LWB res TO UPB res DO res[i] := (0, HEAP[1]DICTENTRY) OD; res);
 
-PRIO => = 2;
-OP => = (REF DICT map, STRING word)REF DATUM:
+PRIO KEY = 2;
+OP KEY = (REF DICT map, STRING word)REF DATUM:
 BEGIN
     INT pos = HASH word MOD (UPB map+1);
     REF REF []DICTENTRY list = bins OF map[pos];

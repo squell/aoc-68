@@ -10,7 +10,7 @@ BEGIN
     DO
       STRING key;
       readf(($2a " -> " al$, key));
-      rules=>key[1:2] := key[3]+key[2]
+      rules KEY key[1:2] := key[3]+key[2]
     OD;
 done reading:
     SKIP
@@ -21,7 +21,7 @@ BEGIN
     [2*UPB s-1]CHAR new;
     new[1] := s[1];
     FOR i TO UPB s-1 DO
-      new[2*i:2*i+1] := rules=>s[i:i+1]
+      new[2*i:2*i+1] := rules KEY s[i:i+1]
     OD;
     s := new
 END;

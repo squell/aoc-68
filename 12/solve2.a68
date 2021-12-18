@@ -35,8 +35,8 @@ BEGIN
   DO
     STRING a,b;
     read((a,LOC CHAR,b,new line));
-    connections=>a +:= b;
-    connections=>b +:= a
+    connections KEY a +:= b;
+    connections KEY b +:= a
   OD;
   done reading:
   SKIP
@@ -50,7 +50,7 @@ PROC walk = (STRING entry, goal)VOID:
    PROC go = (STRING cur)VOID:
    (
      cur path +:= cur;
-     []STRING next = map=>cur;
+     []STRING next = map KEY cur;
      IF cur = goal THEN
        total paths +:= 1;
        CO printf(($n(UPB cur path-1)(g",")gl$, cur path)) CO
