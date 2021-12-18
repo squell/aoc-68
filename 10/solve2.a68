@@ -12,10 +12,8 @@ CO more plumbing CO
 PROC insert = (REF FLEX[]LONG INT arr, LONG INT value)VOID:
 BEGIN
   []LONG INT copy = arr;
-  arr := LOC [LWB arr:UPB arr+1]LONG INT;
-  FOR i FROM LWB copy TO UPB copy DO
-    arr[i] := copy[i]
-  OD;
+  arr := LOC [LWB arr:UPB copy+1]LONG INT;
+  arr[LWB arr:UPB copy] := copy;
   arr[UPB arr] := value;
   FOR i FROM UPB arr DOWNTO LWB arr+1
   WHILE arr[i-1] > arr[i] DO

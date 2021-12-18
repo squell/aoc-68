@@ -4,7 +4,7 @@ BEGIN
   FLEX[0]INT pos;
   FOR i DO
     INT x; readf(($g","$,x));
-    [i]INT new pos; FOR j TO i-1 DO new pos[j] := pos[j] OD;
+    [i]INT new pos; new pos[1:i-1] := pos;
     (pos := new pos)[i] := x
   OD;
 done reading:
@@ -17,7 +17,7 @@ PROC sum = (INT a, b, PROC(INT)INT value)INT:
 PROC triangle = (INT a)INT:
   (INT x = ABS a; x*(x+1) % 2);
 
-FLEX[0]INT crabs := get positions;
+[]INT crabs = get positions;
 INT best fuel := 1000000000;
 INT best pos;
 FOR pos FROM 0 TO 2000 DO
