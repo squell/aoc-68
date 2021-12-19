@@ -1,0 +1,99 @@
+PR include "read.a68" PR
+
+PROC traverse = (LIST list, PROC(INT,REF UNION(INT,LIST))BOOL visit)VOID:
+BEGIN
+  PROC dive into = (INT depth, LIST list)VOID:
+    FOR i TO UPB list DO
+      BOOL found = visit(depth, elem OF list[i]);
+      CASE elem OF list[i] IN
+        (LIST sub): IF NOT found THEN dive into(depth+1, sub) FI
+      ESAC
+    OD;
+  dive into(0,list)
+END;
+
+PROC is regular = (LIST pair)BOOL:
+  (BOOL result := TRUE;
+   FOR i TO UPB pair WHILE result DO
+     (elem OF pair[i] | (INT n): ~ | result := FALSE)
+   OD; result);
+
+PROC snailfish reduce = (LIST n)LIST:
+BEGIN
+  PROC deep copy = (LIST data)LIST:
+   (HEAP[UPB data]LISTELEM copy;
+    FOR i TO UPB data DO
+      (elem OF data[i] | (LIST pair): elem OF copy[i] := deep copy(pair)
+                       | copy[i] := data[i])
+    OD;
+    copy);
+
+  LIST data := deep copy(n);
+  REF UNION(INT,LIST) last regular;
+  INT last regular value, add to next regular;
+  BOOL exploded;
+
+  PROC explode = (INT depth, REF UNION(INT,LIST) cell)BOOL:
+    CASE cell IN (LIST pair): 
+		  IF depth >= 3 AND is regular(pair) AND NOT exploded THEN
+		    IF REF UNION(INT,LIST) prev cell = last regular; prev cell ISNT NIL THEN
+		      prev cell := last regular value + (elem OF pair[1] | (INT n): n)
+		    FI;
+		    add to next regular := (elem OF pair[2] | (INT n): n);
+		    cell := 0;
+		    exploded := TRUE
+		  ELSE FALSE
+		  FI,
+		  (INT n): 
+		    BEGIN
+		      cell := n + add to next regular;
+		      last regular := cell;
+		      last regular value := n;
+		      IF exploded THEN just start again FI
+		    END
+    ESAC;
+
+  PROC split = (INT depth, REF UNION(INT,LIST) cell)BOOL:
+    (cell | (INT n): IF n >= 10 THEN cell := make pair (n%2, (n+1)%2); just start again FI | FALSE);
+   
+just start again:
+  CO dump list(data); print(new line); CO
+  exploded := FALSE;
+  last regular := NIL;
+  add to next regular := 0;
+  traverse(data, explode);
+  traverse(data, split);
+  data
+END;
+
+PROC snailfish add = (LIST a,b)LIST:
+  snailfish reduce(make pair(a,b));
+
+PROC snailfish abs = (LIST a)INT:
+BEGIN
+  OP ABS = (UNION(INT,LIST) cell)INT:
+  CASE cell IN
+    (INT n): n,
+    (LIST pair): 3*ABS elem OF pair[1] + 2*ABS elem OF pair[2]
+  ESAC;
+  ABS a
+END;
+
+INT max magnitude := -1000;
+LIST x1, x2;
+
+FOR i TO UPB homework DO FOR j TO UPB homework DO
+  IF i /= j THEN
+    INT this = snailfish abs(
+      snailfish add((elem OF homework[i] | (LIST pair): pair),
+		    (elem OF homework[j] | (LIST pair): pair))
+    );
+    (this > max magnitude | max magnitude := this;
+      x1 := (elem OF homework[i] | (LIST pair): pair);
+      x2 := (elem OF homework[j] | (LIST pair): pair))
+  FI
+OD OD;
+
+dump list(x1); print(new line);
+dump list(x2); print(new line);
+print((max magnitude, new line))

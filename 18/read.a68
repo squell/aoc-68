@@ -1,0 +1,59 @@
+CO data type and some operations for snailfish numbers CO
+MODE LISTELEM = STRUCT(UNION(INT,LIST) elem);
+MODE LIST = REF[]LISTELEM;
+
+PROC make pair = (UNION(INT,LIST) x, y)LIST:
+  (HEAP[2]LISTELEM result; elem OF result := (x, y); result);
+
+PROC append = (REF LIST arr)REF UNION(INT, LIST):
+  (LIST(arr) IS NIL 
+  | elem OF (arr := HEAP [1]LISTELEM)[1] CO TODO: funny bug in Algol68g if the first [1] is removed; notify Marcel. CO
+  | HEAP[UPB arr+1]LISTELEM fresh; fresh[1:UPB arr] := arr; arr := fresh; elem OF arr[UPB arr]
+  );
+
+PROC dump list = (LIST data)VOID:
+BEGIN
+  print("[");
+  FOR i TO UPB data DO
+    IF i > 1 THEN print(",") FI;
+    CASE elem OF data[i] IN
+      (INT n)   : printf(($g(0)$, n)),
+      (LIST sub): dump list(sub)
+    ESAC
+  OD;
+  print("]")
+END;
+
+PROC parse = (STRING s)LIST:
+BEGIN
+  INT i := 1;
+
+  PROC parse elem = UNION(INT, LIST):
+    IF s[i] = "[" THEN
+      LIST sublist := NIL;
+      WHILE s[i] /= "]" DO
+        i +:= 1;
+        append(sublist) := parse elem;
+        i +:= 1
+      OD;
+      sublist
+    ELSE
+      INT p; char in string(s[i], p, "1234567890");
+      p MOD 10
+    FI;
+
+  CASE parse elem IN
+    (LIST result): result
+  ESAC
+END;
+
+LIST homework = BEGIN
+  LIST lines := NIL;
+  on logical file end(stand in, (REF FILE f)BOOL: done reading);
+  DO
+    STRING s; read((s)); read(new line);
+    append(lines) := parse(s)
+  OD;
+done reading:
+  lines
+END;
