@@ -1,18 +1,22 @@
 PR include "read.a68" PR
 
-PROC traverse = (REF NUMBER num, PROC(INT,REF NUMBER)BOOL visit)VOID:
+CO NOTE: the traversal style was changed a bit; unrelated to the changed needed to handle part 2
+   (which was simply to perform a deep instead of a shallow copy CO
+
+PROC traverse = (REF NUMBER num, PROC(INT,REF NUMBER,REF NUMBER)VOID visit)VOID:
 BEGIN
-  PROC dive into = (INT depth, REF NUMBER num)VOID:
+  PROC dive into = (INT depth, REF NUMBER num, parent)VOID:
   BEGIN
-    BOOL found = visit(depth, num);
+    visit(depth, num, parent);
     CASE num IN
-      (REF PAIR sub): IF NOT found THEN
-                        dive into(depth+1, left  OF sub);
-			dive into(depth+1, right OF sub)
-                      FI
+      (REF PAIR sub): BEGIN
+			REF NUMBER tmp = right OF sub;
+                        dive into(depth+1, left  OF sub, num);
+			dive into(depth+1, tmp, num)
+                      END
     ESAC
   END;
-  dive into(0,num)
+  dive into(0,num,NIL)
 END;
 
 PRIO COPY = 1;
@@ -27,33 +31,30 @@ BEGIN
   NUMBER data := COPY n;
   REF NUMBER last regular;
   INT add to next regular;
-  BOOL exploded;
+  INT exploded;
 
-  PROC explode = (INT depth, REF NUMBER cell)BOOL:
-    CASE cell IN (REF PAIR pair): 
-                  IF depth >= 4 AND NOT exploded THEN
+  PROC explode = (INT depth, REF NUMBER cell, parent)VOID:
+    CASE cell IN
+      (INT n): IF depth >= 5 AND exploded < 2 THEN
+                 CASE exploded +:= 1 IN
                     IF REF NUMBER prev cell = last regular; prev cell ISNT NIL THEN
-                      prev cell := (prev cell | (INT n): n) + (left OF pair | (INT n): n)
-                    FI;
-                    add to next regular := (right OF pair | (INT n): n);
-                    cell := 0;
-                    exploded := TRUE
-                  ELSE FALSE
-                  FI,
-                  (INT n): 
-                    BEGIN
-                      cell := n + add to next regular;
-                      last regular := cell;
-                      IF exploded THEN just start again FI
-                    END
+                      prev cell := n + (prev cell | (INT n): n)
+                    FI,
+		    (add to next regular := n; parent := 0)
+                 ESAC
+               ELSE
+                 last regular := cell;
+		 cell := n + add to next regular;
+                 IF exploded /= 0 THEN just start again FI
+	       FI
     ESAC;
 
-  PROC split = (INT depth, REF NUMBER cell)BOOL:
-    (cell | (INT n): IF n >= 10 THEN cell := make pair (n%2, (n+1)%2); just start again FI | FALSE);
-   
+  PROC split = (INT depth, REF NUMBER cell, parent)VOID:
+    (cell | (INT n): IF n >= 10 THEN cell := make pair (n%2, (n+1)%2); just start again FI);
+
 just start again:
   CO dump(data); print(new line); CO
-  exploded := FALSE;
+  exploded := 0;
   last regular := NIL;
   add to next regular := 0;
   traverse(data, explode);
