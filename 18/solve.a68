@@ -15,24 +15,17 @@ BEGIN
   dive into(0,num)
 END;
 
-PROC is regular = (PAIR tuple)BOOL:
-  (BOOL result := TRUE;
-   []NUMBER pair = (left OF tuple, right OF tuple);
-   FOR i TO UPB pair WHILE result DO
-     (pair[i] | (INT n): ~ | result := FALSE)
-   OD; result);
-
 PROC snailfish reduce = (REF NUMBER data)VOID:
 BEGIN
   REF NUMBER last regular;
-  INT last regular value, add to next regular;
+  INT add to next regular;
   BOOL exploded;
 
   PROC explode = (INT depth, REF NUMBER cell)BOOL:
     CASE cell IN (REF PAIR pair): 
-                  IF depth >= 4 AND is regular(pair) AND NOT exploded THEN
+                  IF depth >= 4 AND NOT exploded THEN
                     IF REF NUMBER prev cell = last regular; prev cell ISNT NIL THEN
-                      prev cell := last regular value + (left OF pair | (INT n): n)
+                      prev cell := (prev cell | (INT n): n) + (left OF pair | (INT n): n)
                     FI;
                     add to next regular := (right OF pair | (INT n): n);
                     cell := 0;
@@ -43,7 +36,6 @@ BEGIN
                     BEGIN
                       cell := n + add to next regular;
                       last regular := cell;
-                      last regular value := n;
                       IF exploded THEN just start again FI
                     END
     ESAC;
