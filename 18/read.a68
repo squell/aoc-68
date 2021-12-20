@@ -1,58 +1,36 @@
 CO data type and some operations for snailfish numbers CO
-MODE LISTELEM = STRUCT(UNION(INT,LIST) elem);
-MODE LIST = REF[]LISTELEM;
+MODE PAIR = STRUCT (NUMBER left, right);
+MODE NUMBER = UNION(INT, REF PAIR);
 
-PROC make pair = (UNION(INT,LIST) x, y)LIST:
-  (HEAP[2]LISTELEM result; elem OF result := (x, y); result);
+PROC make pair = (NUMBER x, y)REF PAIR:
+  HEAP PAIR := (x,y);
 
-PROC append = (REF LIST arr)REF UNION(INT, LIST):
-  (LIST(arr) IS NIL 
-  | elem OF (arr := HEAP [1]LISTELEM)[1] CO TODO: funny bug in Algol68g if the first [1] is removed; notify Marcel. CO
-  | HEAP[UPB arr+1]LISTELEM fresh; fresh[1:UPB arr] := arr; arr := fresh; elem OF arr[UPB arr]
-  );
+PROC dump = (NUMBER data)VOID:
+  CASE data IN
+    (INT n):      printf(($g(0)$, n)),
+    (REF PAIR p): (print("["); dump(left OF p); print(","); dump(right OF p); print("]"))
+  ESAC;
 
-PROC dump list = (LIST data)VOID:
+PROC parse = (REF STRING s)NUMBER:
 BEGIN
-  print("[");
-  FOR i TO UPB data DO
-    IF i > 1 THEN print(",") FI;
-    CASE elem OF data[i] IN
-      (INT n)   : printf(($g(0)$, n)),
-      (LIST sub): dump list(sub)
-    ESAC
-  OD;
-  print("]")
+  CHAR c = s[1]; s := s[2:];
+  IF c = "[" THEN
+    NUMBER lt = parse (s); s := s[2:];
+    NUMBER rt = parse (s); s := s[2:];
+    make pair (lt, rt)
+  ELSE
+    INT p; char in string(c, p, "1234567890");
+    p MOD 10
+  FI
 END;
 
-PROC parse = (STRING s)LIST:
-BEGIN
-  INT i := 1;
-
-  PROC parse elem = UNION(INT, LIST):
-    IF s[i] = "[" THEN
-      LIST sublist := NIL;
-      WHILE s[i] /= "]" DO
-        i +:= 1;
-        append(sublist) := parse elem;
-        i +:= 1
-      OD;
-      sublist
-    ELSE
-      INT p; char in string(s[i], p, "1234567890");
-      p MOD 10
-    FI;
-
-  CASE parse elem IN
-    (LIST result): result
-  ESAC
-END;
-
-LIST homework = BEGIN
-  LIST lines := NIL;
+[]NUMBER homework = BEGIN
+  FLEX[0]NUMBER lines;
   on logical file end(stand in, (REF FILE f)BOOL: done reading);
   DO
     STRING s; read((s)); read(new line);
-    append(lines) := parse(s)
+    ([UPB lines+1]NUMBER tmp; tmp[1:UPB lines] := lines; lines := tmp);
+    lines[UPB lines] := parse(s)
   OD;
 done reading:
   lines

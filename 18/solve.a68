@@ -1,81 +1,78 @@
 PR include "read.a68" PR
 
-PROC traverse = (LIST list, PROC(INT,REF UNION(INT,LIST))BOOL visit)VOID:
+PROC traverse = (REF NUMBER num, PROC(INT,REF NUMBER)BOOL visit)VOID:
 BEGIN
-  PROC dive into = (INT depth, LIST list)VOID:
-    FOR i TO UPB list DO
-      BOOL found = visit(depth, elem OF list[i]);
-      CASE elem OF list[i] IN
-        (LIST sub): IF NOT found THEN dive into(depth+1, sub) FI
-      ESAC
-    OD;
-  dive into(0,list)
+  PROC dive into = (INT depth, REF NUMBER num)VOID:
+  BEGIN
+    BOOL found = visit(depth, num);
+    CASE num IN
+      (REF PAIR sub): IF NOT found THEN
+                        dive into(depth+1, left  OF sub);
+			dive into(depth+1, right OF sub)
+                      FI
+    ESAC
+  END;
+  dive into(0,num)
 END;
 
-PROC is regular = (LIST pair)BOOL:
+PROC is regular = (PAIR tuple)BOOL:
   (BOOL result := TRUE;
+   []NUMBER pair = (left OF tuple, right OF tuple);
    FOR i TO UPB pair WHILE result DO
-     (elem OF pair[i] | (INT n): ~ | result := FALSE)
+     (pair[i] | (INT n): ~ | result := FALSE)
    OD; result);
 
-PROC snailfish reduce = (LIST n)LIST:
+PROC snailfish reduce = (REF NUMBER data)VOID:
 BEGIN
-  LIST data := n;
-  REF UNION(INT,LIST) last regular;
+  REF NUMBER last regular;
   INT last regular value, add to next regular;
   BOOL exploded;
 
-  PROC explode = (INT depth, REF UNION(INT,LIST) cell)BOOL:
-    CASE cell IN (LIST pair): 
-		  IF depth >= 3 AND is regular(pair) AND NOT exploded THEN
-		    IF REF UNION(INT,LIST) prev cell = last regular; prev cell ISNT NIL THEN
-		      prev cell := last regular value + (elem OF pair[1] | (INT n): n)
-		    FI;
-		    add to next regular := (elem OF pair[2] | (INT n): n);
-		    cell := 0;
-		    exploded := TRUE
-		  ELSE FALSE
-		  FI,
-		  (INT n): 
-		    BEGIN
-		      cell := n + add to next regular;
-		      last regular := cell;
-		      last regular value := n;
-		      IF exploded THEN just start again FI
-		    END
+  PROC explode = (INT depth, REF NUMBER cell)BOOL:
+    CASE cell IN (REF PAIR pair): 
+                  IF depth >= 4 AND is regular(pair) AND NOT exploded THEN
+                    IF REF NUMBER prev cell = last regular; prev cell ISNT NIL THEN
+                      prev cell := last regular value + (left OF pair | (INT n): n)
+                    FI;
+                    add to next regular := (right OF pair | (INT n): n);
+                    cell := 0;
+                    exploded := TRUE
+                  ELSE FALSE
+                  FI,
+                  (INT n): 
+                    BEGIN
+                      cell := n + add to next regular;
+                      last regular := cell;
+                      last regular value := n;
+                      IF exploded THEN just start again FI
+                    END
     ESAC;
 
-  PROC split = (INT depth, REF UNION(INT,LIST) cell)BOOL:
+  PROC split = (INT depth, REF NUMBER cell)BOOL:
     (cell | (INT n): IF n >= 10 THEN cell := make pair (n%2, (n+1)%2); just start again FI | FALSE);
    
 just start again:
-  CO dump list(data); print(new line); CO
+  CO dump(data); print(new line); CO
   exploded := FALSE;
   last regular := NIL;
   add to next regular := 0;
   traverse(data, explode);
-  traverse(data, split);
-  data
+  traverse(data, split)
 END;
 
-PROC snailfish add = (LIST a,b)LIST:
-  snailfish reduce(make pair(a,b));
+OP +:= = (REF NUMBER x, NUMBER y)VOID:
+  snailfish reduce(x := make pair(x,y));
 
-PROC snailfish abs = (LIST a)INT:
-BEGIN
-  OP ABS = (UNION(INT,LIST) cell)INT:
-  CASE cell IN
+OP ABS = (NUMBER x)INT:
+  CASE x IN
     (INT n): n,
-    (LIST pair): 3*ABS elem OF pair[1] + 2*ABS elem OF pair[2]
+    (REF PAIR pair): 3*ABS left OF pair + 2*ABS right OF pair
   ESAC;
-  ABS a
-END;
 
-LIST acc := (elem OF homework[1] | (LIST pair): pair);
+NUMBER acc := homework[1];
 FOR i FROM 2 TO UPB homework DO
-  acc := snailfish add(acc, (elem OF homework[i] | (LIST pair): pair))
+  acc +:= homework[i]
 OD;
 
-dump list(acc);
-print((snailfish abs(acc), new line))
-
+dump(acc);
+print((ABS acc, new line))
