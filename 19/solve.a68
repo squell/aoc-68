@@ -51,10 +51,40 @@ BEGIN
     give up early: SKIP
     END;
 
+    REF[]BOOL filter := HEAP[0:1000]BOOL;
+    FOR i FROM LWB filter TO UPB filter DO filter[i] := FALSE OD;
+    OP ABS = (POS p)INT: ABS p[1]+ABS p[2]+ABS p[3];
+
+    CO dynamic enlargement; i am tired of all these constants CO
+    PROC lookup = (INT d)REF BOOL:
+       (WHILE d > UPB filter DO
+         HEAP[0:2*UPB filter]BOOL enlarged;
+	 enlarged[0:UPB filter] := filter[:];
+         FOR i FROM UPB filter+1 TO UPB enlarged DO enlarged[i] := FALSE OD;
+	 filter := enlarged
+       OD;
+       filter[d]);
+
+    PROC quick check = (PROC(POS)INT dist)BOOL:
+    BEGIN
+      INT match := 0;
+      FOR j FROM LWB s2 TO UPB s2
+      WHILE match < goal AND match + UPB s2 - j + 1 >= goal DO
+        IF lookup(dist(s2[j])) THEN match +:= 1 FI
+      OD;
+      match >= goal
+    END;
+
     PROC check translations = VOID:
-      FOR i FROM LWB s1 TO UPB s1 DO FOR j FROM LWB s2 TO UPB s2 DO
-        check orientations(s1[1:i-1],s1[i:],(XFORM f,POS p)POS: f(p-s2[j]) + s1[i])
-      OD OD;
+      FOR i FROM LWB s1 TO UPB s1 DO
+        FOR i2 FROM i TO UPB s1 DO lookup(ABS (s1[i] - s1[i2])) := TRUE OD;
+        FOR j FROM LWB s2 TO UPB s2 DO
+          IF quick check ((POS p)INT: ABS(p-s2[j])) THEN
+            check orientations(s1[1:i-1],s1[i:],(XFORM f,POS p)POS: f(p-s2[j]) + s1[i])
+	  FI
+        OD;
+        FOR i2 FROM i TO UPB s1 DO lookup(ABS (s1[i] - s1[i2])) := TRUE OD
+      OD;
 
     PROC check orientations = ([]POS ctx,s1, PROC(XFORM,POS)POS xlat)VOID:
       FOR x sign FROM -1 BY 2 TO 1 DO
@@ -86,7 +116,7 @@ BEGIN
     FOR i FROM 2 TO UPB info DO
       print(".");
       IF NOT merge scanner(acc, info[i], acc) THEN
-	rejects[failed+:=1] := info[i] 
+	rejects[failed+:=1] := info[i]
       FI
     OD;
     CO this assumes the puzzle has a solution CO
