@@ -80,20 +80,21 @@ BEGIN
         FOR i2 FROM i TO UPB s1 DO lookup(ABS (s1[i] - s1[i2])) := TRUE OD;
         FOR j FROM LWB s2 TO UPB s2 DO
           IF quick check ((POS p)INT: ABS(p-s2[j])) THEN
-            check orientations(s1[1:i-1],s1[i:],(XFORM f,POS p)POS: f(p-s2[j]) + s1[i])
+	    PROC translate = (XFORM f,POS p)POS: f(p-s2[j]) + s1[i];
+            check orientations((XFORM rot)VOID: check match(s1[1:i-1], s1[i:], translate, rot))
 	  FI
         OD;
         FOR i2 FROM i TO UPB s1 DO lookup(ABS (s1[i] - s1[i2])) := TRUE OD
       OD;
 
-    PROC check orientations = ([]POS ctx,s1, PROC(XFORM,POS)POS xlat)VOID:
+    PROC check orientations = (PROC (XFORM)VOID try)VOID:
       FOR x sign FROM -1 BY 2 TO 1 DO
       FOR y sign FROM -1 BY 2 TO 1 DO
       FOR z sign FROM -1 BY 2 TO 1 DO
         FOR ofs FROM 0 TO 2 DO
 	  INT det = x sign * y sign * z sign;
 	  INT x = 1+(ofs+1-det)MOD 3, y = 1+(ofs+1)MOD 3, z = 1+(ofs+1+det)MOD 3;
-          check match(ctx, s1, xlat, (POS p)POS: (x sign*p[x], y sign*p[y], z sign*p[z]))
+          try( (POS p)POS: (x sign*p[x], y sign*p[y], z sign*p[z]))
         OD
       OD OD OD;
 
