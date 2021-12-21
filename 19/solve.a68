@@ -123,25 +123,26 @@ success:
     result
 END;
 
+CO this assumes the puzzle has a solution CO
 PROC merge all = ([][]POS start)[]POS:
 BEGIN
-  FLEX[100]FLEX[0]POS rejects := start;
-  FLEX[0]POS acc;
+  FLEX[100]FLEX[0]POS rejects := start[2:];
+  FLEX[0]POS acc := start[1];
   WHILE
-    acc := rejects[1];
-    print("|");
+    printf(($g(0)"|"$,UPB rejects));
     [][]POS info = rejects;
     INT failed := 0;
-    FOR i FROM 2 TO UPB info DO
+
+    FOR i FROM 1 TO UPB info DO
       print(".");
       IF NOT merge scanner(acc, info[i], acc) THEN
 	rejects[failed+:=1] := info[i]
       FI
     OD;
-    CO this assumes the puzzle has a solution CO
     failed > 0
   DO
-    rejects[failed+:=1] := acc
+    rejects := rejects[1:failed];
+    sweep heap
   OD;
   acc
 END;
