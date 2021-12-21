@@ -13,15 +13,17 @@ PROC merge scanner = ([]POS s1, s2, REF FLEX[]POS beacons)BOOL:
 BEGIN
 
     CO this could be sped up CO
-    PROC check match = (XFORM f)VOID:
+    PROC check match = ([]POS context, []POS s1, XFORM f)VOID:
     BEGIN
+      IF UPB s1 < goal THEN give up early FI;
       COMMENT
       FLEX[100]POS my common match;
       COMMENT
       FLEX[500]POS map;
       map[1:UPB s1] := s1;
       map := map[@1-UPB s1];
-      INT match := 0, new beacons := 0;
+      INT match := 0, new beacons;
+      map[1:new beacons:=UPB context] := context;
 
       FOR j FROM LWB s2 TO UPB s2 DO
         POS projection = f(s2[j]);
@@ -52,7 +54,7 @@ BEGIN
     PROC check translations = (XFORM f)VOID:
       FOR i FROM LWB s1 TO UPB s1 DO FOR j FROM LWB s2 TO UPB s2 DO
         POS delta = s1[i] - f(s2[j]);
-        check match((POS p)POS: f(p) + delta)
+        check match(s1[1:i-1],s1[i:],(POS p)POS: f(p) + delta)
       OD OD;
 
     PROC check orientations = (XFORM f)VOID:
