@@ -13,7 +13,7 @@ PROC merge scanner = ([]POS s1, s2, REF FLEX[]POS beacons)BOOL:
 BEGIN
 
     CO this could be sped up CO
-    PROC check match = ([]POS context, []POS s1, XFORM f)VOID:
+    PROC check match = ([]POS context, []POS s1, PROC(XFORM,POS)POS xlat, XFORM rot)VOID:
     BEGIN
       IF UPB s1 < goal THEN give up early FI;
       COMMENT
@@ -26,7 +26,7 @@ BEGIN
       map[1:new beacons:=UPB context] := context;
 
       FOR j FROM LWB s2 TO UPB s2 DO
-        POS projection = f(s2[j]);
+        POS projection = xlat(rot,s2[j]);
         FOR i FROM LWB s1 TO UPB s1 DO
           IF s1[i] = projection THEN
             match +:= 1;
@@ -51,25 +51,24 @@ BEGIN
     give up early: SKIP
     END;
 
-    PROC check translations = (XFORM f)VOID:
+    PROC check translations = VOID:
       FOR i FROM LWB s1 TO UPB s1 DO FOR j FROM LWB s2 TO UPB s2 DO
-        POS delta = s1[i] - f(s2[j]);
-        check match(s1[1:i-1],s1[i:],(POS p)POS: f(p) + delta)
+        check orientations(s1[1:i-1],s1[i:],(XFORM f,POS p)POS: f(p-s2[j]) + s1[i])
       OD OD;
 
-    PROC check orientations = (XFORM f)VOID:
+    PROC check orientations = ([]POS ctx,s1, PROC(XFORM,POS)POS xlat)VOID:
       FOR x sign FROM -1 BY 2 TO 1 DO
       FOR y sign FROM -1 BY 2 TO 1 DO
       FOR z sign FROM -1 BY 2 TO 1 DO
         FOR ofs FROM 0 TO 2 DO
 	  INT det = x sign * y sign * z sign;
 	  INT x = 1+(ofs+1-det)MOD 3, y = 1+(ofs+1)MOD 3, z = 1+(ofs+1+det)MOD 3;
-          check translations((POS p)POS: (POS q = f(p); (x sign*q[x], y sign*q[y], z sign*q[z])))
+          check match(ctx, s1, xlat, (POS p)POS: (x sign*p[x], y sign*p[y], z sign*p[z]))
         OD
       OD OD OD;
 
     BOOL result := TRUE;
-    check orientations ((POS p)POS: p);
+    check translations;
     result := FALSE;
 success:
     result
