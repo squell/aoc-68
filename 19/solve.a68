@@ -12,14 +12,15 @@ FLEX[100]POS common match;
 PROC merge scanner = ([]POS s1, s2, REF FLEX[]POS beacons)BOOL:
 BEGIN
 
+    FLEX[1000]POS map;
+
     CO this could be sped up CO
-    PROC check match = ([]POS context, []POS s1, PROC(XFORM,POS)POS xlat, XFORM rot)VOID:
+    PROC verify match = ([]POS context, []POS s1, PROC(XFORM,POS)POS xlat, XFORM rot)VOID:
     BEGIN
       IF UPB s1 < goal THEN give up early FI;
       COMMENT
       FLEX[100]POS my common match;
       COMMENT
-      FLEX[500]POS map;
       map[1:UPB s1] := s1;
       map := map[@1-UPB s1];
       INT match := 0, new beacons;
@@ -65,23 +66,40 @@ BEGIN
        OD;
        filter[d]);
 
-    PROC quick check = (PROC(POS)INT dist)BOOL:
+    PROC quick check = (PROC(POS)INT dist, REF LONG BITS set)BOOL:
     BEGIN
+      set := LENG BIN 0;
       INT match := 0;
       FOR j FROM LWB s2 TO UPB s2
       WHILE match < goal AND match + UPB s2 - j + 1 >= goal DO
-        IF lookup(dist(s2[j])) THEN match +:= 1 FI
+        IF lookup(dist(s2[j])) THEN
+          set := j SET set;
+	  match +:= 1
+	FI
       OD;
       match >= goal
+    END;
+
+    PROC deduce orientation = ([]POS context, s1, LONG BITS set, PROC(POS,POS)BOOL equidistant, PROC(XFORM,POS)POS xlat)VOID:
+    BEGIN
+      FOR j FROM LWB s2 TO UPB s2 DO IF j ELEM set THEN
+        FOR i FROM LWB s1 TO UPB s1 DO IF equidistant(s1[i],s2[j]) THEN
+	  check orientations((XFORM rot)VOID:
+	    IF xlat(rot, s2[j]) = s1[i] THEN verify match(context, s1, xlat, rot) FI)
+	FI OD
+      FI OD
     END;
 
     PROC check translations = VOID:
       FOR i FROM LWB s1 TO UPB s1 DO
         FOR i2 FROM i TO UPB s1 DO lookup(ABS (s1[i] - s1[i2])) := TRUE OD;
         FOR j FROM LWB s2 TO UPB s2 DO
-          IF quick check ((POS p)INT: ABS(p-s2[j])) THEN
-	    PROC translate = (XFORM f,POS p)POS: f(p-s2[j]) + s1[i];
-            check orientations((XFORM rot)VOID: check match(s1[1:i-1], s1[i:], translate, rot))
+	  LONG BITS set;
+	  PROC taxi metric = (POS p)INT: ABS(p-s2[j]);
+          PROC translate   = (XFORM f,POS p)POS: f(p-s2[j]) + s1[i];
+          IF quick check (taxi metric, set) THEN
+            deduce orientation(s1[1:i-1],s1[i:], set, (POS p1,p2)BOOL: ABS(p1-s1[i]) = ABS(p2-s2[j]), translate)
+            CO check orientations((XFORM rot)VOID: verify match(s1[1:i-1], s1[i:], translate, rot)) CO
 	  FI
         OD;
         FOR i2 FROM i TO UPB s1 DO lookup(ABS (s1[i] - s1[i2])) := TRUE OD
