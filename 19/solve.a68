@@ -1,0 +1,105 @@
+PR include "read.a68" PR
+
+MODE XFORM = PROC(POS)POS;
+
+INT goal = 12;
+
+[][]POS scanner info = read all scanners;
+
+CO for printing he list of common matches CO
+FLEX[100]POS common match;
+
+PROC merge scanner = ([]POS s1, s2, REF FLEX[]POS beacons)BOOL:
+BEGIN
+
+    CO this could be sped up CO
+    PROC check match = (XFORM f)VOID:
+    BEGIN
+      COMMENT
+      FLEX[100]POS my common match;
+      COMMENT
+      FLEX[500]POS map;
+      map[1:UPB s1] := s1;
+      map := map[@1-UPB s1];
+      INT match := 0, new beacons := 0;
+
+      FOR j FROM LWB s2 TO UPB s2 DO
+        POS projection = f(s2[j]);
+        FOR i FROM LWB s1 TO UPB s1 DO
+          IF s1[i] = projection THEN
+            match +:= 1;
+	    COMMENT
+	    my common match[match] := projection;
+	    COMMENT
+	    next j
+          FI
+        OD;
+        map[new beacons+:=1] := projection;
+	IF UPB s2 - j < goal - match THEN give up early FI;
+        next j: SKIP
+      OD;
+
+      IF match >= goal THEN
+        COMMENT
+        common match := my common match[1:match];
+	COMMENT
+        beacons := map[LWB map:new beacons@1];
+        success
+      FI;
+    give up early: SKIP
+    END;
+
+    PROC check translations = (XFORM f)VOID:
+      FOR i FROM LWB s1 TO UPB s1 DO FOR j FROM LWB s2 TO UPB s2 DO
+        POS delta = s1[i] - f(s2[j]);
+        check match((POS p)POS: f(p) + delta)
+      OD OD;
+
+    PROC check orientations = (XFORM f)VOID:
+      FOR x sign FROM -1 BY 2 TO 1 DO
+      FOR y sign FROM -1 BY 2 TO 1 DO
+      FOR z sign FROM -1 BY 2 TO 1 DO
+        FOR ofs FROM 0 TO 2 DO
+	  INT det = x sign * y sign * z sign;
+	  INT x = 1+(ofs+1-det)MOD 3, y = 1+(ofs+1)MOD 3, z = 1+(ofs+1+det)MOD 3;
+          check translations((POS p)POS: (POS q = f(p); (x sign*q[x], y sign*q[y], z sign*q[z])))
+        OD
+      OD OD OD;
+
+    BOOL result := TRUE;
+    check orientations ((POS p)POS: p);
+    result := FALSE;
+success:
+    result
+END;
+
+PROC merge all = ([][]POS start)[]POS:
+BEGIN
+  FLEX[100]FLEX[0]POS rejects := start;
+  FLEX[0]POS acc;
+  WHILE
+    acc := rejects[1];
+    print("|");
+    [][]POS info = rejects;
+    INT failed := 0;
+    FOR i FROM 2 TO UPB info DO
+      print(".");
+      IF NOT merge scanner(acc, info[i], acc) THEN
+	rejects[failed+:=1] := info[i] 
+      FI
+    OD;
+    CO this assumes the puzzle has a solution CO
+    failed > 0
+  DO
+    rejects[failed+:=1] := acc
+  OD;
+  acc
+END;
+
+CO for testing
+IF NOT merge scanner(scanner info[1], scanner info[2], LOC FLEX[0]POS) THEN print("???") ELSE printf(($g(0)",",g(0)","g(0)l$, common match)) FI
+CO
+
+[]POS found beacons = merge all(scanner info);
+printf(($g(0)",",g(0)","g(0)l$, found beacons));
+printf(($"total beacons="g(0)l$, UPB found beacons))

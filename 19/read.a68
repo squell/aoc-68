@@ -1,0 +1,37 @@
+MODE POS = [3]INT;
+
+OP = = (POS a,b)BOOL:
+  (a[1] = b[1] AND a[2] = b[2] AND a[3] = b[3]);
+
+OP + = (POS a,b)POS:
+  (a[1] + b[1], a[2] + b[2], a[3] + b[3]);
+
+OP - = (POS a,b)POS:
+  (a[1] - b[1], a[2] - b[2], a[3] - b[3]);
+
+PROC read all scanners = [][]POS:
+BEGIN
+    BOOL eof := FALSE;
+    PROC read scanner = []POS:
+    BEGIN
+	readf(($"-- scanner "g" ---"l$, LOC INT));
+	on logical file end(stand in, (REF FILE f)BOOL: (eof := TRUE; end of report));
+	on value error(stand in, (REF FILE f)BOOL: end of report);
+	INT num := 0;
+	on format end(stand in, (REF FILE f)BOOL: (num +:= 1; FALSE));
+	[100]POS pos;
+	readf(($g",",g","gl$, pos));
+    end of report:
+	on logical file end(stand in, ~);
+	pos[1:num]
+    END;
+
+    [100]FLEX[0]POS scanner;
+    INT num;
+    BOOL done := FALSE;
+    FOR i FROM 1 WHILE NOT eof DO
+	scanner[num:=i] := read scanner
+    OD;
+end of file:
+    scanner[1:num]
+END;
