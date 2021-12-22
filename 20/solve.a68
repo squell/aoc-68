@@ -1,0 +1,80 @@
+[512]BOOL pixel enhance;
+readf(($b("#",".")$, pixel enhance));
+readf($2l$);
+
+FLEX[0,0]BOOL image :=
+  ([100,100]BOOL data; 
+   readf(($n(2 UPB data)(n(1 UPB data)(b("#","."))l)$, data)); data);
+
+BOOL filler := FALSE;
+
+PROC pixel = ([,]BOOL buf, BOOL filler, INT y, x)BOOL:
+BEGIN
+  INT acc := 0;
+  FOR i FROM y-1 TO y+1 DO
+  FOR j FROM x-1 TO x+1 DO
+    acc := 2*acc + (IF i < 1 LWB buf OR i > 1 UPB buf OR
+                       j < 2 LWB buf OR j > 2 UPB buf 
+		    THEN filler
+		    ELSE buf[i,j]
+		    FI | 1 | 0)
+  OD OD;
+  pixel enhance[acc+1]
+END;
+
+PROC enhance = VOID:
+BEGIN
+  [,]BOOL buffer = image;
+  BOOL old filler = filler;
+  filler := pixel enhance[(filler|512|1)];
+  FOR y FROM 1 LWB buffer-2 TO 1 UPB buffer+2 DO
+  FOR x FROM 2 LWB buffer-2 TO 2 UPB buffer+2 DO
+    write pixel(y,x, pixel(buffer,old filler,y,x))
+  OD OD
+END;
+
+PROC write pixel = (INT y,x, BOOL pixel)VOID:
+  IF y >= 1 LWB image AND y <= 1 UPB image AND
+     x >= 2 LWB image AND x <= 2 UPB image
+  THEN
+    image[y,x] := pixel
+  ELIF pixel /= filler THEN
+    enlarge your pixel now (y,x);
+    image[y,x] := pixel
+  FI;
+
+PROC pixels = INT:
+  IF filler THEN
+    print(("an infinite amount of pixels...")); stop
+  ELSE
+    INT acc := 0;
+    FOR i FROM 1 LWB image TO 1 UPB image DO
+    FOR j FROM 2 LWB image TO 2 UPB image DO
+      acc +:= (image[i,j] | 1 | 0)
+    OD OD;
+    acc
+  FI;
+
+PROC enlarge your pixel now = (INT y,x)VOID:
+BEGIN
+  WHILE y < 1 LWB image OR y > 1 UPB image
+  OR    x < 2 LWB image OR x > 2 UPB image
+  DO
+    INT height = 1 UPB image - 1 LWB image + 1;
+    INT width  = 2 UPB image - 2 LWB image + 1;
+    [-height:2*height, -width:2*width]BOOL new image;
+    FOR i FROM 1 LWB new image TO 1 UPB new image DO
+    FOR j FROM 2 LWB new image TO 2 UPB new image DO
+      new image [i,j] := filler
+    OD OD;
+    new image[1 LWB image:1 UPB image,
+              2 LWB image:2 UPB image] := image[:,:];
+    image := new image
+  OD
+END;
+
+enhance;
+enhance;
+
+printf(($n(2 UPB image-2 LWB image+1)(n(1 UPB image-1 LWB image+1)(b("#","."))l)$, image));
+print((pixels,newline))
