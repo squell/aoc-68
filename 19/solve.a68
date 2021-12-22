@@ -45,6 +45,8 @@ BEGIN
       IF match >= goal THEN
         COMMENT
         common match := my common match[1:match];
+	print(("rotation matrix",   new line, rot((1,0,0)), new line, rot((0,1,0)), new line, rot((0,0,1)), newline));
+	print(("origin", new line, xlat(rot,(0,0,0)), newline));
 	COMMENT
         beacons := map[LWB map:new beacons@1];
         success
@@ -66,54 +68,57 @@ BEGIN
        OD;
        filter[d]);
 
-    PROC quick check = (PROC(POS)INT dist, REF LONG BITS set)BOOL:
+    PROC quick check = (PROC(POS)INT dist)BOOL:
     BEGIN
-      set := LENG BIN 0;
       INT match := 0;
       FOR j FROM LWB s2 TO UPB s2
       WHILE match < goal AND match + UPB s2 - j + 1 >= goal DO
         IF lookup(dist(s2[j])) THEN
-          set := j SET set;
 	  match +:= 1
 	FI
       OD;
       match >= goal
     END;
 
-    PROC deduce orientation = ([]POS context, s1, LONG BITS set, PROC(POS,POS)BOOL equidistant, PROC(XFORM,POS)POS xlat)VOID:
+    PROC deduce orientation = ([]POS context, s1, PROC(POS,POS)BOOL equidistant, PROC(XFORM,POS)POS xlat)VOID:
     BEGIN
-      FOR j FROM LWB s2 TO UPB s2 DO IF j ELEM set THEN
+      BITS rejected orientation := BIN 0;
+      FOR j FROM LWB s2 TO UPB s2 DO
         FOR i FROM LWB s1 TO UPB s1 DO IF equidistant(s1[i],s2[j]) THEN
+          INT rotation number := 0;
 	  check orientations((XFORM rot)VOID:
-	    IF xlat(rot, s2[j]) = s1[i] THEN verify match(context, s1, xlat, rot) FI)
+	    IF NOT ((rotation number+:=1) ELEM rejected orientation) THEN
+	      IF xlat(rot, s2[j]) = s1[i] THEN
+                verify match(context, s1, xlat, rot);
+		rejected orientation := rotation number SET rejected orientation
+	      FI
+	    FI)
 	FI OD
-      FI OD
+      OD
     END;
 
     PROC check translations = VOID:
       FOR i FROM LWB s1 TO UPB s1 DO
         FOR i2 FROM i TO UPB s1 DO lookup(ABS (s1[i] - s1[i2])) := TRUE OD;
         FOR j FROM LWB s2 TO UPB s2 DO
-	  LONG BITS set;
 	  PROC taxi metric = (POS p)INT: ABS(p-s2[j]);
           PROC translate   = (XFORM f,POS p)POS: f(p-s2[j]) + s1[i];
-          IF quick check (taxi metric, set) THEN
-            deduce orientation(s1[1:i-1],s1[i:], set, (POS p1,p2)BOOL: ABS(p1-s1[i]) = ABS(p2-s2[j]), translate)
-            CO check orientations((XFORM rot)VOID: verify match(s1[1:i-1], s1[i:], translate, rot)) CO
+          IF quick check (taxi metric) THEN
+            deduce orientation(s1[1:i-1],s1[i:], (POS p1,p2)BOOL: ABS(p1-s1[i]) = ABS(p2-s2[j]), translate)
 	  FI
         OD;
-        FOR i2 FROM i TO UPB s1 DO lookup(ABS (s1[i] - s1[i2])) := TRUE OD
+        FOR i2 FROM i TO UPB s1 DO lookup(ABS (s1[i] - s1[i2])) := FALSE OD
       OD;
 
     PROC check orientations = (PROC (XFORM)VOID try)VOID:
       FOR x sign FROM -1 BY 2 TO 1 DO
       FOR y sign FROM -1 BY 2 TO 1 DO
       FOR z sign FROM -1 BY 2 TO 1 DO
-        FOR ofs FROM 0 TO 2 DO
+	FOR ofs FROM 0 TO 2 DO
 	  INT det = x sign * y sign * z sign;
 	  INT x = 1+(ofs+1-det)MOD 3, y = 1+(ofs+1)MOD 3, z = 1+(ofs+1+det)MOD 3;
-          try( (POS p)POS: (x sign*p[x], y sign*p[y], z sign*p[z]))
-        OD
+	  try( (POS p)POS: (x sign*p[x], y sign*p[y], z sign*p[z]))
+	OD
       OD OD OD;
 
     BOOL result := TRUE;
