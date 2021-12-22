@@ -1,0 +1,175 @@
+PR include "read.a68" PR
+
+MODE XFORM = PROC(POS)POS;
+
+INT goal = 12;
+
+[][]POS scanner info = read all scanners;
+
+CO for printing he list of common matches CO
+CO FLEX[100]POS common match; CO
+
+CO going to do this the lazy way and record some scanners multiple times CO
+[100]POS scanner pos;
+INT scanners detected := 0;
+
+OP ABS = (POS p)INT: ABS p[1]+ABS p[2]+ABS p[3];
+
+PROC merge scanner = ([]POS s1, s2, REF FLEX[]POS beacons)BOOL:
+BEGIN
+
+    FLEX[1000]POS map;
+
+    CO this could be sped up CO
+    PROC verify match = ([]POS context, []POS s1, PROC(XFORM,POS)POS xlat, XFORM rot)VOID:
+    BEGIN
+      IF UPB s1 < goal THEN give up early FI;
+      COMMENT
+      FLEX[100]POS my common match;
+      COMMENT
+      map[1:UPB s1] := s1;
+      map := map[@1-UPB s1];
+      INT match := 0, new beacons;
+      map[1:new beacons:=UPB context] := context;
+
+      FOR j FROM LWB s2 TO UPB s2 DO
+        POS projection = xlat(rot,s2[j]);
+        FOR i FROM LWB s1 TO UPB s1 DO
+          IF s1[i] = projection THEN
+            match +:= 1;
+	    COMMENT
+	    my common match[match] := projection;
+	    COMMENT
+	    next j
+          FI
+        OD;
+        map[new beacons+:=1] := projection;
+	IF UPB s2 - j < goal - match THEN give up early FI;
+        next j: SKIP
+      OD;
+
+      IF match >= goal THEN
+        COMMENT
+        common match := my common match[1:match];
+	print(("rotation matrix",   new line, rot((1,0,0)), new line, rot((0,1,0)), new line, rot((0,0,1)), newline));
+	print(("origin", new line, xlat(rot,(0,0,0)), newline));
+	COMMENT
+	scanner pos[scanners detected+:=1] := xlat(rot,(0,0,0));
+        beacons := map[LWB map:new beacons@1];
+        success
+      FI;
+    give up early: SKIP
+    END;
+
+    REF[]BOOL filter := HEAP[0:1000]BOOL;
+    FOR i FROM LWB filter TO UPB filter DO filter[i] := FALSE OD;
+
+    CO dynamic enlargement; i am tired of all these constants CO
+    PROC lookup = (INT d)REF BOOL:
+       (WHILE d > UPB filter DO
+         HEAP[0:2*UPB filter]BOOL enlarged;
+	 enlarged[0:UPB filter] := filter[:];
+         FOR i FROM UPB filter+1 TO UPB enlarged DO enlarged[i] := FALSE OD;
+	 filter := enlarged
+       OD;
+       filter[d]);
+
+    PROC quick check = (PROC(POS)INT dist)BOOL:
+    BEGIN
+      INT match := 0;
+      FOR j FROM LWB s2 TO UPB s2
+      WHILE match < goal AND match + UPB s2 - j + 1 >= goal DO
+        IF lookup(dist(s2[j])) THEN
+	  match +:= 1
+	FI
+      OD;
+      match >= goal
+    END;
+
+    PROC deduce orientation = ([]POS context, s1, PROC(POS,POS)BOOL equidistant, PROC(XFORM,POS)POS xlat)VOID:
+    BEGIN
+      BITS rejected orientation := BIN 0;
+      FOR j FROM LWB s2 TO UPB s2 DO
+        FOR i FROM LWB s1 TO UPB s1 DO IF equidistant(s1[i],s2[j]) THEN
+          INT rotation number := 0;
+	  check orientations((XFORM rot)VOID:
+	    IF NOT ((rotation number+:=1) ELEM rejected orientation) THEN
+	      IF xlat(rot, s2[j]) = s1[i] THEN
+                verify match(context, s1, xlat, rot);
+		rejected orientation := rotation number SET rejected orientation
+	      FI
+	    FI)
+	FI OD
+      OD
+    END;
+
+    PROC check translations = VOID:
+      FOR i FROM LWB s1 TO UPB s1 DO
+        FOR i2 FROM i TO UPB s1 DO lookup(ABS (s1[i] - s1[i2])) := TRUE OD;
+        FOR j FROM LWB s2 TO UPB s2 DO
+	  PROC taxi metric = (POS p)INT: ABS(p-s2[j]);
+          PROC translate   = (XFORM f,POS p)POS: f(p-s2[j]) + s1[i];
+          IF quick check (taxi metric) THEN
+            deduce orientation(s1[1:i-1],s1[i:], (POS p1,p2)BOOL: ABS(p1-s1[i]) = ABS(p2-s2[j]), translate)
+	  FI
+        OD;
+        FOR i2 FROM i TO UPB s1 DO lookup(ABS (s1[i] - s1[i2])) := FALSE OD
+      OD;
+
+    PROC check orientations = (PROC (XFORM)VOID try)VOID:
+      FOR x sign FROM -1 BY 2 TO 1 DO
+      FOR y sign FROM -1 BY 2 TO 1 DO
+      FOR z sign FROM -1 BY 2 TO 1 DO
+	FOR ofs FROM 0 TO 2 DO
+	  INT det = x sign * y sign * z sign;
+	  INT x = 1+(ofs+1-det)MOD 3, y = 1+(ofs+1)MOD 3, z = 1+(ofs+1+det)MOD 3;
+	  try( (POS p)POS: (x sign*p[x], y sign*p[y], z sign*p[z]))
+	OD
+      OD OD OD;
+
+    BOOL result := TRUE;
+    check translations;
+    result := FALSE;
+success:
+    result
+END;
+
+CO this assumes the puzzle has a solution CO
+PROC merge all = ([][]POS start)[]POS:
+BEGIN
+  FLEX[100]FLEX[0]POS rejects := start[2:];
+  FLEX[0]POS acc := start[1];
+  WHILE
+    printf(($g(0)"|"$,UPB rejects));
+    [][]POS info = rejects;
+    INT failed := 0;
+
+    FOR i FROM 1 TO UPB info DO
+      print(".");
+      IF NOT merge scanner(acc, info[i], acc) THEN
+	rejects[failed+:=1] := info[i]
+      FI
+    OD;
+    failed > 0
+  DO
+    rejects := rejects[1:failed];
+    sweep heap
+  OD;
+  acc
+END;
+
+CO for testing
+IF NOT merge scanner(scanner info[1], scanner info[2], LOC FLEX[0]POS) THEN print("???") ELSE printf(($g(0)",",g(0)","g(0)l$, common match)) FI
+CO
+
+[]POS found beacons = merge all(scanner info);
+printf(($g(0)",",g(0)","g(0)l$, found beacons));
+printf(($"total beacons="g(0)l$, UPB found beacons));
+
+INT max dist := 0;
+FOR i FROM 1 TO scanners detected DO
+FOR j FROM i+1 TO scanners detected DO
+  INT distance = ABS (scanner pos[i] - scanner pos[j]);
+  IF distance > max dist THEN max dist := distance FI
+OD OD;
+printf(($"max distance between scanners ="g(0)l$, max dist))
