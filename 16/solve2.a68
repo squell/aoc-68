@@ -6,10 +6,7 @@ FLEX [0]BOOL raw bits := BEGIN
   getf(f,($16r1z$, q));
   [4*UPB s]BOOL acc;
   FOR i FROM 4 BY 4 TO UPB acc DO
-    acc[i-3:i] :=((bits width-3) ELEM q[i%4],
-                  (bits width-2) ELEM q[i%4], 
-		  (bits width-1) ELEM q[i%4],
-		  (bits width  ) ELEM q[i%4])
+    acc[i-3:i] := []BOOL(q[i%4])[bits width-3 : bits width]
   OD;
   acc
 END;
