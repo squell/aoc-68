@@ -49,21 +49,17 @@ split = snd . go
   go x                   = (False, x)
 
 data Status = Plain Int | Boom (Int,Int) | Stop
-  deriving (Eq,Ord)
 
 explode :: Snail -> Snail
-explode snail = result
+explode snail = fst $ go (Just 0) snail (0,0)
   where
-  (result, x) = go (Just 0) snail (0,force x)
-  force (Plain x) = x
-
   go :: Maybe Int -> Snail -> (Int,Int) -> (Snail, Status)
 
   go n (Value x :~: Value y) _ | n >= Just 4  -- kapoof!
    = (Value 0, Boom (x,y))
 
   go n (Value x) (a,x') | n >= Just 0
-    = (Value (a+x'), Plain x)
+    = (Value (a+x+x'), Plain x)
 
   go n (Value x) (a,_)
     = (Value (a+x), Stop)
@@ -72,7 +68,7 @@ explode snail = result
     = (left' :~: right', case (x, z) of (Boom(val,_), _           ) -> Boom(val,0)
                                         (_          , Boom (_,val)) -> Boom(0,val)
                                         _ -> z)
-    where (left' , x) = go  (fmap(+1) n) left  (a,force x + case z of Boom(val,_) -> val; _ -> 0)
+    where (left' , x) = go  (fmap(+1) n) left  (a,  case z of Boom(val,_) -> val; _ -> 0)
           (right', z) = go' (fmap(+1) n) right (case x of Boom(_,val) -> val; _ -> 0, z')
 
           go' = case x of Stop   -> \_ n _ -> (n, Stop)
