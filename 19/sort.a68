@@ -1,0 +1,20 @@
+PROC sort = (INT lo,hi, PROC(INT,INT)BOOL cmp, PROC(INT,INT)VOID swap)VOID:
+  FOR i FROM lo+1 TO hi DO
+  FOR j FROM i-1 DOWNTO lo
+  WHILE NOT cmp (j,j+1) 
+  DO        swap(j,j+1)
+  OD
+  OD;
+
+PROC bin search = (INT init lo,init hi, PROC(INT)BOOL cmp)VOID:
+BEGIN
+  INT lo  := init lo, 
+      hi  := init hi;
+  WHILE lo <= hi DO
+    IF INT mid = lo+(hi-lo)%2; cmp(mid) THEN
+      lo := mid+1
+    ELSE
+      hi := mid-1
+    FI
+  OD
+END;

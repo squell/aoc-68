@@ -14,7 +14,6 @@ BEGIN
 
     FLEX[1000]POS map;
 
-    CO this could be sped up CO
     PROC verify match = ([]POS context, []POS s1, PROC(XFORM,POS)POS xlat, XFORM rot)VOID:
     BEGIN
       IF UPB s1 < goal THEN give up early FI;
@@ -28,15 +27,17 @@ BEGIN
 
       FOR j FROM LWB s2 TO UPB s2 DO
         POS projection = xlat(rot,s2[j]);
-        FOR i FROM LWB s1 TO UPB s1 DO
+	bin search(LWB s1, UPB s1, (INT i)BOOL:
           IF s1[i] = projection THEN
             match +:= 1;
 	    COMMENT
 	    my common match[match] := projection;
 	    COMMENT
 	    next j
+	  ELSE
+	    s1[i] <= projection
           FI
-        OD;
+        );
         map[new beacons+:=1] := projection;
 	IF UPB s2 - j < goal - match THEN give up early FI;
         next j: SKIP
@@ -128,6 +129,18 @@ success:
     result
 END;
 
+PR include "sort.a68" PR
+OP <= = (POS a,b)BOOL:
+BEGIN
+  INT sign := 0;
+  FOR i FROM 1 TO 3
+  WHILE sign = 0 DO
+    sign := SIGN (a[i] - b[i])
+  OD;
+break:
+  sign <= 0
+END;
+
 CO this assumes the puzzle has a solution CO
 PROC merge all = ([][]POS start)[]POS:
 BEGIN
@@ -139,6 +152,8 @@ BEGIN
     INT failed := 0;
 
     FOR i FROM 1 TO UPB info DO
+      sort(LWB acc, UPB acc, (INT i,j)BOOL: acc[i] <= acc[j],
+                             (INT i,j)VOID: (POS tmp = acc[i]; acc[i] := acc[j]; acc[j]:=tmp));
       print(".");
       IF NOT merge scanner(acc, info[i], acc) THEN
 	rejects[failed+:=1] := info[i]
