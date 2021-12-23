@@ -48,7 +48,7 @@ split = snd . go
                              ((_   , x'), (b,y')) -> (b,    x' :~: y')
   go x                   = (False, x)
 
-data Status = Plain Int | Boom (Int,Int) | Stop
+data Status = Seeking | Boom (Int,Int) | Idle
 
 explode :: Snail -> Snail
 explode snail = fst $ go (Just 0) snail (0,0)
@@ -56,22 +56,19 @@ explode snail = fst $ go (Just 0) snail (0,0)
   go :: Maybe Int -> Snail -> (Int,Int) -> (Snail, Status)
 
   go n (Value x :~: Value y) _ | n >= Just 4  -- kapoof!
-   = (Value 0, Boom (x,y))
+    = (Value 0, Boom (x,y))
 
-  go n (Value x) (a,x') | n >= Just 0
-    = (Value (a+x+x'), Plain x)
+  go n (Value x) (l,r)
+    = (Value (l+x+r), if n /= Nothing then Seeking else Idle)
 
-  go n (Value x) (a,_)
-    = (Value (a+x), Stop)
+  go n (left :~: right) (a,z)
+    = (left' :~: right', case (s1,s2) of (Boom(val,_), _           ) -> Boom(val,0)
+                                         (_          , Boom (_,val)) -> Boom(0,val)
+                                         _ -> s2)
+    where (left' , s1) = go  (fmap(+1) n) left  (a, case s2 of Boom(val,_) -> val; _ -> 0)
+          (right', s2) = go' (fmap(+1) n) right (case s1 of Boom(_,val) -> val; _ -> 0, z)
 
-  go n (left :~: right) (a,z')
-    = (left' :~: right', case (x, z) of (Boom(val,_), _           ) -> Boom(val,0)
-                                        (_          , Boom (_,val)) -> Boom(0,val)
-                                        _ -> z)
-    where (left' , x) = go  (fmap(+1) n) left  (a,  case z of Boom(val,_) -> val; _ -> 0)
-          (right', z) = go' (fmap(+1) n) right (case x of Boom(_,val) -> val; _ -> 0, z')
-
-          go' = case x of Stop   -> \_ n _ -> (n, Stop)
-                          Boom _ -> \_ -> go Nothing
-                          _      -> go
+          go' = case s1 of Idle   -> \_ n _ -> (n, Idle)
+                           Boom _ -> \_ -> go Nothing
+                           _      -> go
 
