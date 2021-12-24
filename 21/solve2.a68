@@ -1,0 +1,32 @@
+[2]INT pos;
+readf(($"Player 1 starting position: "gl$, pos[1]));
+readf(($"Player 2 starting position: "gl$, pos[2]));
+
+OP OTHER = (INT p)INT: 3 - p;
+
+[2]LONG INT wins := (0,0);
+
+PROC play game = (LONG INT q, INT cur, my score, my pos, opponent score, opponent pos)VOID:
+BEGIN
+  FOR dice FROM 3 TO 9 DO
+    LONG INT worlds = q*(dice-2 | 1, 3, 6, 7, 6, 3, 1);
+    IF 
+       INT new pos   = (my pos+dice-1)MOD 10+1;
+       INT new score = my score + new pos;
+       new score >= 21
+    THEN
+       wins[cur] +:= worlds
+    ELSE
+       play game (worlds, OTHER cur, opponent score, opponent pos, new score, new pos)
+    FI
+  OD
+END;
+
+play game(1, 1, 0, pos[1], 0, pos[2]);
+printf(($"player 1 wins: "g(0)l$, wins[1]));
+printf(($"player 2 wins: "g(0)l$, wins[2]));
+IF wins[1] >= wins[2] THEN
+  printf(($"player 1 wins the most: "g(0)l$, wins[1]))
+ELSE
+  printf(($"player 2 wins the most: "g(0)l$, wins[2]))
+FI

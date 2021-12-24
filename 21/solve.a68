@@ -1,0 +1,24 @@
+[2]INT pos, score := (0,0);
+readf(($"Player 1 starting position: "gl$, pos[1]));
+readf(($"Player 2 starting position: "gl$, pos[2]));
+
+INT rolls := 0;
+INT seed := 0;
+PROC die = INT:
+  (INT tmp := seed+1; seed := tmp %* 100; rolls +:= 1; tmp);
+
+PROC dice = INT:
+  die + die + die; CO my darling CO
+
+OP OTHER = (INT p)INT: 3 - p;
+
+INT cur := 1;
+WHILE
+  score[cur] +:= (pos[cur] := (pos[cur]+dice-1)MOD 10+1);
+  score[cur] < 1000
+DO
+  cur := OTHER cur
+OD;
+
+print((pos, score, new line));
+print((score[OTHER cur] * rolls, new line))

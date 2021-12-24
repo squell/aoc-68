@@ -1,0 +1,35 @@
+[-50:50, -50:50, -50:50]BOOL false, true, reactor;
+FOR i FROM 1 LWB reactor TO 1 UPB reactor DO
+FOR j FROM 2 LWB reactor TO 2 UPB reactor DO
+FOR k FROM 3 LWB reactor TO 3 UPB reactor DO
+  false[i,j,k] := FALSE;
+  true [i,j,k] := TRUE
+OD OD OD;
+
+reactor := false;
+
+on logical file end(stand in, (REF FILE f)BOOL: done);
+
+DO
+    BOOL switch;
+    [2]INT x, y, z;
+    readf(($b("on","off")" x="g(0)".."g(0)",y="g(0)".."g(0)",z="g(0)".."g(0)l$, switch, x, y, z));
+    IF x[1] >= 1 LWB reactor AND x[2] <= 1 UPB reactor AND
+       y[1] >= 2 LWB reactor AND y[2] <= 2 UPB reactor AND
+       z[1] >= 3 LWB reactor AND z[2] <= 3 UPB reactor
+    THEN
+      reactor[x[1]:x[2], y[1]:y[2], z[1]:z[2]] := (switch|true|false)[x[1]:x[2], y[1]:y[2], z[1]:z[2]]
+    FI
+OD;
+
+done:
+BEGIN
+    INT acc := 0;
+    FOR i FROM 1 LWB reactor TO 1 UPB reactor DO
+    FOR j FROM 2 LWB reactor TO 2 UPB reactor DO
+    FOR k FROM 3 LWB reactor TO 3 UPB reactor DO
+      acc +:= (reactor[i,j,k] | 1 | 0)
+    OD OD OD;
+
+    print(("cells on:",acc))
+END

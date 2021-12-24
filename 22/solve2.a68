@@ -1,0 +1,67 @@
+MODE POS = STRUCT(INT x,y,z);
+
+MODE CUBE = [2]POS;
+
+PROC min = (INT x,y)INT: (x<=y|x|y);
+PROC max = (INT x,y)INT: (x<=y|y|x);
+
+PROC intersection = (CUBE a,b)CUBE:
+  ((max(x OF a[1], x OF b[1]), max(y OF a[1], y OF b[1]), max(z OF a[1], z OF b[1])),
+   (min(x OF a[2], x OF b[2]), min(y OF a[2], y OF b[2]), min(z OF a[2], z OF b[2])));
+
+OP = = (POS a,b)BOOL:
+  (x OF a = x OF b AND
+   y OF a = y OF b AND
+   z OF a = z OF b);
+  
+OP = = (CUBE a,b)BOOL:
+  (a[1] = b[1] AND a[2] = b[2]);
+
+PROC is empty = (CUBE pos)BOOL:
+  (x OF pos[1] > x OF pos[2] OR
+   y OF pos[1] > y OF pos[2] OR
+   z OF pos[1] > z OF pos[2]);
+
+PROC size = (CUBE pos)LONG INT:
+  (LENG max (0, x OF pos[2] - x OF pos[1]+1) *
+   LENG max (0, y OF pos[2] - y OF pos[1]+1) *
+   LENG max (0, z OF pos[2] - z OF pos[1]+1));
+
+MODE PATCH = STRUCT(CUBE cube, INT sign);
+[50000]PATCH list;
+INT cubes := 0;
+
+on logical file end(stand in, (REF FILE f)BOOL: done);
+
+CO applying the principle of inclusion and exclusion CO
+DO
+    BOOL switch;
+    [2]INT x, y, z;
+    readf(($b("on","off")" x="g(0)".."g(0)",y="g(0)".."g(0)",z="g(0)".."g(0)l$, switch, x, y, z));
+    print(".");
+    CUBE cur = ((x[1],y[1],z[1]), (x[2],y[2],z[2]));
+    FOR i FROM 1 TO cubes DO IF sign OF list[i] /= 0 THEN
+      preemptive sweep heap;
+      IF is empty(cube OF list[cubes+1] := intersection(cube OF list[i], cur)) THEN
+        SKIP
+      ELIF cube OF list[cubes] = cube OF list[i] THEN
+	sign OF list[i] := 0
+      ELSE
+        sign OF list[cubes+:=1] := - sign OF list[i]
+      FI
+    FI OD;
+    IF switch THEN
+      cubes +:= 1;
+      cube OF list[cubes] := cur;
+      sign OF list[cubes] := 1
+    FI
+OD;
+
+done:
+BEGIN
+    LONG INT acc := 0;
+    FOR k FROM 1 TO cubes DO
+      acc +:= sign OF list[k] * size(cube OF list[k])
+    OD;
+    print((acc, new line))
+END
