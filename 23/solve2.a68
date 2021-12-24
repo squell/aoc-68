@@ -1,0 +1,202 @@
+COMMENT
+
+This runs into a bug in a68g; with -compile -O it complains one of the lambda's is exported out of
+its scope, which isn't true (probably the reason solve.a68 failed silently)
+
+COMMENT
+
+# run as "a68g solve2.a68 -- filename" to get the interactive version #
+
+CO invariant: there is never an amphipod blocking the sideroom CO
+BITS hallway bits := BIN 0;
+[4,4]INT room;
+[11]INT hallway; FOR i FROM 1 TO 11 DO hallway[i] := 0 OD;
+LONG INT energy := 0, best energy := long max int;
+
+CO some routines to turn this into an interactive version CO
+
+PROC VOID report     := VOID: SKIP;
+PROC VOID game over  := VOID: SKIP;
+
+PROC (PROC(INT)VOID)VOID for some passage location := for each passage location;
+PROC (PROC(INT)VOID)VOID for some room := for each room;
+
+PROC ask = (STRING s)INT:
+  (print((s)); INT x; readf(($gl$, x)); x);
+
+(
+    FILE f := stand in;
+    IF argc >= 4 THEN
+      CO override some of the functionality plugs CO
+      report    := VOID: BEGIN display; print((energy, new line)) END;
+      game over := VOID: BEGIN report; stop END;
+      for some passage location := (PROC(INT)VOID do)VOID: do(ask("move to: "));
+      for some room             := (PROC(INT)VOID do)VOID: do(ask("which to move: "));
+      open(f, argv(4), stand in channel)
+    FI;
+    getf(f,($"#############"l$));
+    getf(f,($"#...........#"l$));
+    getf(f,($"###"4(c("A","B","C","D")"#")"##"l$, room[,1]));
+    getf(f,($"  #"4(c("A","B","C","D")"#")    l$, room[,2]));
+    getf(f,($"  #"4(c("A","B","C","D")"#")    l$, room[,3]));
+    getf(f,($"  #"4(c("A","B","C","D")"#")    l$, room[,4]));
+    getf(f,($"  #########"l$))
+);
+
+PROC display = VOID:
+(
+    [11]INT hway := hallway;
+    [4,2 UPB room]INT copy := room;
+    FOR i FROM 1 TO 4 DO FOR j FROM 1 TO 2 UPB room DO copy[i,j] +:= 1 OD OD;
+    FOR i FROM 1 TO 11 DO hway[i] := hallway[i]+1 OD;
+    printf(($"#############"l$));
+    printf(($"#"11(c(".","A","B","C","D"))"#"l$, hway));
+    printf(($"###"4(c(".","A","B","C","D")"#")"##"l$, copy[,1]));
+    printf(($"  #"4(c(".","A","B","C","D")"#")    l$, copy[,2]));
+    printf(($"  #"4(c(".","A","B","C","D")"#")    l$, copy[,3]));
+    printf(($"  #"4(c(".","A","B","C","D")"#")    l$, copy[,4]));
+    printf(($"  #########"l$))
+);
+
+PROC mask = (INT x,y)BITS:
+(
+  PROC decr = (BITS b)BITS: BIN (SHORTEN (ABS LENG b-LENG 1));
+  BITS b1 = x SET BIN 0, b2 = y SET BIN 0;
+  (decr(b1) XOR decr(b2)) AND NOT(b1 OR b2)
+);
+
+PROC compatible = (INT type, []INT occupants)BOOL:
+(
+  BOOL ok := TRUE;
+  FOR i FROM 1 TO UPB occupants WHILE ok DO
+    ok := (type = occupants[i] OR occupants[i] = 0)
+  OD;
+  ok
+);
+
+PROC passage is free = (INT x,y)BOOL:
+  x /= y AND (hallway bits AND mask(x,y)) = BIN 0;
+
+PROC power = (INT type)INT:
+  10^(type-1);
+
+PROC move = (INT i, g, PROC VOID continue)VOID:
+(
+  IF hallway[g] = 0 AND passage is free (i, g) THEN
+    hallway[g] := hallway[i];
+    hallway[i] := 0;
+    hallway bits := i CLEAR hallway bits;
+    hallway bits := g SET hallway bits;
+    energy +:= ABS(i-g) * power(hallway[g]);
+    continue;
+    energy -:= ABS(i-g) * power(hallway[g]);
+    hallway bits := g CLEAR hallway bits;
+    hallway bits := i SET hallway bits;
+    hallway[i] := hallway[g];
+    hallway[g] := 0
+  FI
+);
+
+PROC depth = ([]INT room)INT:
+(
+  INT n := 1;
+  TO UPB room WHILE room[n] = 0 DO n +:= 1 OD;
+  n-1
+);
+
+PROC move to sideroom = (INT i, PROC VOID continue)VOID:
+(
+  INT type = hallway[i];
+  INT g = (type | 3,5,7,9);
+  IF passage is free (i, g) AND compatible(type, room[type,])
+  THEN
+    hallway[i] := 0;
+    hallway bits := i CLEAR hallway bits;
+    energy +:= (ABS(i-g) + depth(room[type,])) * power(type);
+    FOR k FROM 1 TO (2 UPB room)-1 DO room[type,k] := room[type,k+1] OD;
+    room[type,2 UPB room] := type;
+    continue;
+    FOR k FROM (2 UPB room) DOWNTO 2 DO room[type,k] := room[type,k-1] OD;
+    room[type,1] := 0;
+    energy -:= (ABS(i-g) + depth(room[type,])) * power(type);
+    hallway bits := i SET hallway bits;
+    hallway[i] := type
+  FI
+);
+
+PROC for each passage location = (PROC (INT)VOID do)VOID:
+(
+  do(1); FOR i FROM 2 BY 2 TO 10 DO do(i) OD; do(11) CO ... TO DO do OD do CO
+);
+
+PROC for each room = (PROC(INT)VOID do)VOID:
+  FOR i FROM 3 BY 2 TO 9 DO do(i) OD;
+
+PROC room in order = (INT type)BOOL:
+  compatible(type, room[type,]);
+
+PROC move another amphipod = VOID:
+(
+  BOOL cut := FALSE;
+  IF energy > best energy THEN abandon effort FI;
+
+  report;
+
+  for each passage location((INT i)VOID:
+    IF hallway[i] /= 0 THEN
+      move to sideroom(i, VOID: BEGIN check for success; cut:=TRUE END);
+      IF cut THEN abandon effort FI
+    FI
+  );
+
+  CO move all stray amphipods in a first sweep CO
+  FOR pass FROM 1 TO 2 DO
+  (pass=2|for some room|for each room)((INT i)VOID:
+  BEGIN
+    IF NOT room in order(i%2) THEN
+    FOR j FROM 1 TO (2 UPB room) DO IF room[i%2,j] /= 0 THEN
+      energy +:= j*power(hallway[i] := room[i%2,j]);
+      room[i%2,j] := 0;
+      hallway bits := i SET hallway bits;
+      IF pass = 1
+      THEN move to sideroom (i, VOID: BEGIN check for success; cut:=TRUE END)
+      ELSE for some passage location((INT k)VOID: move (i, k, move another amphipod))
+      FI;
+      #
+      CASE pass IN
+        move to sideroom (i, VOID: BEGIN check for success; cut:=TRUE END),
+	for some passage location((INT k)VOID: move (i, k, move another amphipod))
+      ESAC;
+      #
+      energy -:= j*power(room[i%2,j] := hallway[i]);
+      hallway bits := i CLEAR hallway bits;
+      hallway[i] := 0;
+      IF cut THEN abandon effort FI;
+      next room
+    FI OD FI; CO fiee-oohdd-fiee CO
+
+  next room:
+    SKIP
+  END)
+  OD;
+
+abandon effort:
+  SKIP
+);
+
+PROC check for success = VOID:
+(
+  BOOL ok := TRUE;
+  FOR i FROM 1 TO 4 WHILE ok DO
+    ok := room[i,1] = i AND room[i,2] = i
+  OD;
+  IF ok THEN
+    IF energy < best energy THEN best energy := energy; print((best energy, new line)) FI;
+    game over
+  ELSE
+    move another amphipod
+  FI
+);
+
+move another amphipod;
+SKIP
